@@ -293,7 +293,7 @@
     <div id="mapSelectedInfo">
       <p class="empty-hint" style="margin-top:16px;">왼쪽에서 일정을 눌러 보세요.</p>
     </div>
-    <p class="note">※ "자동차" 일정은 서버(Cloudflare Worker + NCP Direction5)를 통해 실제 도로 경로선(실선)을 가져와 표시합니다. 그 외 이동수단은 NCP가 도로 경로를 계산해주지 않아 출발지·도착지를 잇는 직선(점선)으로만 표시됩니다.<br>"네이버 지도 앱에서 길찾기 열기"는 네이버 지도 앱이 설치되어 있으면 출발지·도착지가 세팅된 길찾기 화면으로 바로 열립니다 (안드로이드는 앱이 없으면 자동으로 스토어로 연결됩니다). iOS에서 앱이 없다면 아무 반응이 없을 수 있는데, 이때는 보조 링크로 목적지 위치만 확인하세요.<br>새 일정을 추가할 땐 출발지·도착지의 위경도 좌표만 있으면 됩니다 (네이버 지도 URL을 복사해올 필요 없음).</p>
+    <p class="note">※ "자동차" 일정은 서버(Cloudflare Worker + NCP Direction5)를 통해 실제 도로 경로선(실선)과 실시간 소요시간을 가져와 표시합니다 ("(실시간)" 표시로 구분). 그 외 이동수단은 NCP가 경로를 계산해주지 않아 직선(점선)과 입력해둔 예상 시간이 그대로 표시됩니다.<br>"네이버 지도 앱에서 길찾기 열기"는 네이버 지도 앱이 설치되어 있으면 출발지·도착지가 세팅된 길찾기 화면으로 바로 열립니다 (안드로이드는 앱이 없으면 자동으로 스토어로 연결됩니다). iOS에서 앱이 없다면 아무 반응이 없을 수 있는데, 이때는 보조 링크로 목적지 위치만 확인하세요.<br>새 일정을 추가할 땐 출발지·도착지의 위경도 좌표만 있으면 됩니다 (네이버 지도 URL을 복사해올 필요 없음).</p>
   </div>
 </div>
 
@@ -420,11 +420,11 @@
         </div>
         <div class="schedule-meta">
           <span class="chip">${TRANSPORT_ICON[item.transport] || "🚶"} ${item.transport}</span>
-          <span class="chip">⏱ ${item.duration}</span>
+          <span class="chip duration-chip">⏱ ${item.duration}</span>
         </div>
         <div class="schedule-detail">
           <div class="row"><div class="k">이동 수단</div><div class="v">${item.transport}</div></div>
-          <div class="row"><div class="k">이동 시간</div><div class="v">${item.duration}</div></div>
+          <div class="row"><div class="k">이동 시간</div><div class="v duration-value">${item.duration}</div></div>
           <div class="row"><div class="k">일정 내용</div><div class="v">${item.memo}</div></div>
           ${linkButtonsHtml(item)}
         </div>
@@ -456,7 +456,7 @@
     mapSelectedInfoEl.innerHTML = `
       <div class="map-selected-info">
         <div class="route-line">${item.from} <span class="arrow">&#8594;</span> ${item.to}</div>
-        <div>${item.transport} · ${item.duration}</div>
+        <div>${item.transport} · <span class="duration-value">${item.duration}</span></div>
         ${linkButtonsHtml(item)}
       </div>
     `;
@@ -501,7 +501,7 @@
     });
   }
 
-  async function fetchDrivingPath(item) {
+  async function fetchDrivingRoute(item) {
     const url =
       ROUTE_WORKER_URL + "/route?slat=" + item.fromLat + "&slng=" + item.fromLng +
       "&dlat=" + item.toLat + "&dlng=" + item.toLng;
@@ -509,7 +509,33 @@
     if (!res.ok) throw new Error("route fetch failed");
     const data = await res.json();
     if (!data.path) throw new Error("no path in response");
-    return data.path.map(([lat, lng]) => new naver.maps.LatLng(lat, lng));
+    return {
+      path: data.path.map(([lat, lng]) => new naver.maps.LatLng(lat, lng)),
+      durationMs: data.durationMs
+    };
+  }
+
+  function formatDuration(durationMs) {
+    const totalMinutes = Math.round(durationMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) {
+      return "약 " + hours + "시간" + (minutes > 0 ? " " + minutes + "분" : "");
+    }
+    return "약 " + minutes + "분";
+  }
+
+  // 실측 소요시간이 도착하면, 선택된 카드/지도 패널에 표시된 고정 예상시간을 실제 값으로 덮어쓴다.
+  function updateDurationDisplay(durationMs) {
+    const text = formatDuration(durationMs) + " (실시간)";
+    document.querySelectorAll(".schedule-card.selected .duration-chip").forEach((el) => {
+      el.textContent = "⏱ " + text;
+    });
+    document.querySelectorAll(".schedule-card.selected .duration-value").forEach((el) => {
+      el.textContent = text;
+    });
+    const mapDurationEl = mapSelectedInfoEl.querySelector(".duration-value");
+    if (mapDurationEl) mapDurationEl.textContent = text;
   }
 
   async function showMapPins(item) {
@@ -531,12 +557,13 @@
 
     if (isCarMode) {
       try {
-        const path = await fetchDrivingPath(item);
+        const { path, durationMs } = await fetchDrivingRoute(item);
         if (mySeq !== mapRequestSeq) return; // 그 사이 다른 일정이 선택됨
         drawPolyline(item, path, true);
+        if (durationMs) updateDurationDisplay(durationMs);
         return;
       } catch (e) {
-        // 서버/네트워크 오류 시 직선으로 대체
+        // 서버/네트워크 오류 시 직선으로 대체 (표시된 예상 시간은 고정값 그대로 둠)
       }
     }
 
