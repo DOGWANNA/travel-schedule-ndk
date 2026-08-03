@@ -6,17 +6,17 @@
 <title>나의 여행 일정</title>
 <style>
   :root {
-    --bg-top: #eef2ff;
-    --bg-bottom: #f6f7fb;
-    --panel-bg: #ffffff;
-    --border: #e7e8ee;
-    --text: #1f2430;
-    --text-sub: #8a8f9c;
-    --accent: #03c75a;
-    --accent-dark: #02a94c;
-    --accent-soft: #eafbf1;
-    --shadow: 0 8px 24px rgba(31, 36, 48, 0.06);
-    --shadow-hover: 0 10px 28px rgba(3, 199, 90, 0.14);
+    --bg-top: #fff2e2;
+    --bg-bottom: #fdf7f0;
+    --panel-bg: #fffaf4;
+    --border: #f1ddc9;
+    --text: #3c2c20;
+    --text-sub: #9c8879;
+    --accent: #e2703f;
+    --accent-dark: #c25a2e;
+    --accent-soft: #fbe6d4;
+    --shadow: 0 8px 24px rgba(60, 40, 20, 0.07);
+    --shadow-hover: 0 10px 28px rgba(226, 112, 63, 0.18);
   }
   * { box-sizing: border-box; }
   body {
@@ -92,7 +92,7 @@
     color: var(--text-sub);
     cursor: pointer;
     border-radius: 999px;
-    background: #f2f3f7;
+    background: #f7ece0;
     white-space: nowrap;
     transition: background .15s, color .15s;
   }
@@ -207,7 +207,7 @@
     font-size: 13.5px;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 6px 16px rgba(3, 199, 90, 0.28);
+    box-shadow: 0 6px 16px rgba(226, 112, 63, 0.3);
     transition: filter .15s, transform .1s;
   }
   .naver-link-btn:hover {
@@ -233,7 +233,7 @@
   #naverMap {
     height: 260px;
     border-radius: 14px;
-    background: #eef2ff;
+    background: #fbe6d4;
     overflow: hidden;
   }
   .map-selected-info {
@@ -252,13 +252,72 @@
     color: var(--text-sub);
     font-size: 13px;
   }
-  .note {
+  .info-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
-    font-size: 11px;
-    line-height: 1.6;
+    padding: 8px 14px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
     color: var(--text-sub);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .info-btn:hover {
+    background: var(--accent-soft);
+    color: var(--accent-dark);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(60, 40, 20, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-overlay[hidden] {
+    display: none;
+  }
+  .modal-card {
+    background: var(--panel-bg);
+    border-radius: 16px;
+    max-width: 440px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 22px;
+    box-shadow: 0 16px 40px rgba(60, 40, 20, 0.22);
+  }
+  .modal-card h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+  }
+  .modal-card p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--text-sub);
+  }
+  .modal-close-btn {
+    display: block;
+    margin: 18px 0 0 auto;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   @media (max-width: 720px) {
@@ -293,7 +352,19 @@
     <div id="mapSelectedInfo">
       <p class="empty-hint" style="margin-top:16px;">왼쪽에서 일정을 눌러 보세요.</p>
     </div>
-    <p class="note">※ "자동차" 일정은 서버(Cloudflare Worker + NCP Direction5)를 통해 실제 도로 경로선(실선)과 실시간 소요시간을 가져와 표시합니다 ("(실시간)" 표시로 구분). 그 외 이동수단은 NCP가 경로를 계산해주지 않아 직선(점선)과 입력해둔 예상 시간이 그대로 표시됩니다.<br>"네이버 지도 앱에서 길찾기 열기"는 네이버 지도 앱이 설치되어 있으면 출발지·도착지가 세팅된 길찾기 화면으로 바로 열립니다 (안드로이드는 앱이 없으면 자동으로 스토어로 연결됩니다). iOS에서 앱이 없다면 아무 반응이 없을 수 있는데, 이때는 보조 링크로 목적지 위치만 확인하세요.<br>새 일정을 추가할 땐 출발지·도착지의 위경도 좌표만 있으면 됩니다 (네이버 지도 URL을 복사해올 필요 없음).</p>
+    <button type="button" class="info-btn" id="noteInfoBtn">ℹ️ 이용 안내</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="noteModalOverlay" hidden>
+  <div class="modal-card">
+    <h3>이용 안내</h3>
+    <p>
+      ※ "자동차" 일정은 서버(Cloudflare Worker + NCP Direction5)를 통해 실제 도로 경로선(실선)과 실시간 소요시간을 가져와 표시합니다 ("(실시간)" 표시로 구분). 그 외 이동수단은 NCP가 경로를 계산해주지 않아 직선(점선)과 입력해둔 예상 시간이 그대로 표시됩니다.<br><br>
+      "네이버 지도 앱에서 길찾기 열기"는 네이버 지도 앱이 설치되어 있으면 출발지·도착지가 세팅된 길찾기 화면으로 바로 열립니다 (안드로이드는 앱이 없으면 자동으로 스토어로 연결됩니다). iOS에서 앱이 없다면 아무 반응이 없을 수 있는데, 이때는 보조 링크로 목적지 위치만 확인하세요.<br><br>
+      새 일정을 추가할 땐 출발지·도착지의 위경도 좌표만 있으면 됩니다 (네이버 지도 URL을 복사해올 필요 없음).
+    </p>
+    <button type="button" class="modal-close-btn" id="noteModalClose">닫기</button>
   </div>
 </div>
 
@@ -507,7 +578,7 @@
     mapPolyline = new naver.maps.Polyline({
       map: naverMap,
       path,
-      strokeColor: "#03c75a",
+      strokeColor: "#e2703f",
       strokeWeight: isRealRoute ? 4 : 3,
       strokeStyle: isRealRoute ? "solid" : "shortdash"
     });
@@ -582,6 +653,27 @@
     if (mySeq !== mapRequestSeq) return;
     drawPolyline(item, [fromPos, toPos], false);
   }
+
+  // 이용 안내 팝업
+  const noteInfoBtn = document.getElementById("noteInfoBtn");
+  const noteModalOverlay = document.getElementById("noteModalOverlay");
+  const noteModalClose = document.getElementById("noteModalClose");
+
+  function openNoteModal() {
+    noteModalOverlay.hidden = false;
+  }
+  function closeNoteModal() {
+    noteModalOverlay.hidden = true;
+  }
+
+  noteInfoBtn.addEventListener("click", openNoteModal);
+  noteModalClose.addEventListener("click", closeNoteModal);
+  noteModalOverlay.addEventListener("click", (e) => {
+    if (e.target === noteModalOverlay) closeNoteModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !noteModalOverlay.hidden) closeNoteModal();
+  });
 
   initNaverMap();
   renderDayTabs();
