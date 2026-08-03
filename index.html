@@ -230,17 +230,11 @@
     font-size: 12px;
     color: var(--text-sub);
   }
-  .map-placeholder {
-    height: 220px;
+  #naverMap {
+    height: 260px;
     border-radius: 14px;
-    background:
-      linear-gradient(135deg, #eafbf1 0%, #eef2ff 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--accent-dark);
-    font-size: 32px;
-    text-align: center;
+    background: #eef2ff;
+    overflow: hidden;
   }
   .map-selected-info {
     margin-top: 16px;
@@ -294,15 +288,16 @@
 
   <div class="map-panel">
     <h2>지도</h2>
-    <p class="sub">선택한 일정의 길찾기 링크가 여기에도 표시됩니다.</p>
-    <div class="map-placeholder">🗺️</div>
+    <p class="sub">출발지·도착지 마커와 직선 경로를 보여줍니다 (실제 도로 경로는 아래 버튼으로 확인).</p>
+    <div id="naverMap"></div>
     <div id="mapSelectedInfo">
       <p class="empty-hint" style="margin-top:16px;">왼쪽에서 일정을 눌러 보세요.</p>
     </div>
-    <p class="note">※ 버튼을 누르면 네이버 지도에서 실제로 길찾기를 실행했을 때 나온 링크를 그대로 열어, 출발지·도착지가 이미 채워진 "길찾기" 탭으로 바로 이동합니다.<br>새 일정을 추가할 땐 네이버 지도에서 직접 길찾기를 한 번 실행한 뒤 주소창 URL의 좌표·장소ID 값을 복사해서 데이터에 넣어야 정확하게 동작합니다.</p>
+    <p class="note">※ 지도의 점선은 실제 도로를 따라가는 경로가 아니라 출발지·도착지를 잇는 직선입니다 (네이버 지도 API는 도로 경로 계산 기능을 서버 없이는 제공하지 않습니다).<br>실제 경로는 위 버튼으로 네이버 지도에서 확인하세요.<br>새 일정을 추가할 땐 네이버 지도에서 직접 길찾기를 한 번 실행한 뒤 주소창 URL의 좌표·장소ID 값을 복사해서 데이터에 넣어야 정확하게 동작합니다.</p>
   </div>
 </div>
 
+<script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=mi7v1rjuhb&submodules=geocoder"></script>
 <script>
   // 일정 데이터: 날짜(day)별로 이동 항목을 추가하면 자동으로 탭/카드가 생성됩니다.
   //
@@ -317,9 +312,13 @@
       items: [
         {
           from: "유진상가",
+          fromLat: 37.591624,
+          fromLng: 126.943068,
           fromMapCoord: "3zgaTm,2AN5Ui",
           fromPlaceId: "13305205",
           to: "청명초등학교",
+          toLat: 37.265631,
+          toLng: 127.085209,
           toMapCoord: "3zma2y,2Azqys",
           toPlaceId: "11556697",
           transport: "자동차", // 서울 서대문구 <-> 수원 영통구, 약 30km+ 라 도보 불가
@@ -448,6 +447,7 @@
   function renderMapPanel() {
     if (selectedIndex === null) {
       mapSelectedInfoEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">왼쪽에서 일정을 눌러 보세요.</p>';
+      clearMapPins();
       return;
     }
 
@@ -460,8 +460,56 @@
         ${linkButtonsHtml(item)}
       </div>
     `;
+
+    showMapPins(item);
   }
 
+  // 네이버 Dynamic Map: 출발지/도착지 마커 + 둘을 잇는 점선(직선, 실제 도로 경로 아님).
+  let naverMap = null;
+  let mapMarkers = [];
+  let mapPolyline = null;
+
+  function initNaverMap() {
+    if (typeof naver === "undefined" || !naver.maps) return;
+    naverMap = new naver.maps.Map("naverMap", {
+      center: new naver.maps.LatLng(37.43, 127.02), // 유진상가·청명초등학교 사이 중간 지점 근처
+      zoom: 9
+    });
+  }
+
+  function clearMapPins() {
+    mapMarkers.forEach((m) => m.setMap(null));
+    mapMarkers = [];
+    if (mapPolyline) {
+      mapPolyline.setMap(null);
+      mapPolyline = null;
+    }
+  }
+
+  function showMapPins(item) {
+    if (!naverMap || !item.fromLat || !item.toLat) return;
+    clearMapPins();
+
+    const fromPos = new naver.maps.LatLng(item.fromLat, item.fromLng);
+    const toPos = new naver.maps.LatLng(item.toLat, item.toLng);
+
+    mapMarkers.push(new naver.maps.Marker({ position: fromPos, map: naverMap, title: item.from }));
+    mapMarkers.push(new naver.maps.Marker({ position: toPos, map: naverMap, title: item.to }));
+
+    mapPolyline = new naver.maps.Polyline({
+      map: naverMap,
+      path: [fromPos, toPos],
+      strokeColor: "#03c75a",
+      strokeWeight: 3,
+      strokeStyle: "shortdash"
+    });
+
+    const bounds = new naver.maps.LatLngBounds(fromPos, fromPos);
+    bounds.extend(toPos);
+    naverMap.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  }
+
+  initNaverMap();
   renderDayTabs();
   renderScheduleList();
   renderMapPanel();
