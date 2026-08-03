@@ -293,7 +293,7 @@
     <div id="mapSelectedInfo">
       <p class="empty-hint" style="margin-top:16px;">왼쪽에서 일정을 눌러 보세요.</p>
     </div>
-    <p class="note">※ 지도의 점선은 실제 도로를 따라가는 경로가 아니라 출발지·도착지를 잇는 직선입니다 (네이버 지도 API는 도로 경로 계산 기능을 서버 없이는 제공하지 않습니다). 실제 경로는 위 버튼으로 확인하세요.<br>"네이버 지도 앱에서 길찾기 열기"는 네이버 지도 앱이 설치되어 있으면 출발지·도착지가 세팅된 길찾기 화면으로 바로 열립니다 (안드로이드는 앱이 없으면 자동으로 스토어로 연결됩니다). iOS에서 앱이 없다면 아무 반응이 없을 수 있는데, 이때는 보조 링크로 목적지 위치만 확인하세요.<br>새 일정을 추가할 땐 출발지·도착지의 위경도 좌표만 있으면 됩니다 (네이버 지도 URL을 복사해올 필요 없음).</p>
+    <p class="note">※ "자동차" 일정은 서버(Cloudflare Worker + NCP Direction5)를 통해 실제 도로 경로선(실선)을 가져와 표시합니다. 그 외 이동수단은 NCP가 도로 경로를 계산해주지 않아 출발지·도착지를 잇는 직선(점선)으로만 표시됩니다.<br>"네이버 지도 앱에서 길찾기 열기"는 네이버 지도 앱이 설치되어 있으면 출발지·도착지가 세팅된 길찾기 화면으로 바로 열립니다 (안드로이드는 앱이 없으면 자동으로 스토어로 연결됩니다). iOS에서 앱이 없다면 아무 반응이 없을 수 있는데, 이때는 보조 링크로 목적지 위치만 확인하세요.<br>새 일정을 추가할 땐 출발지·도착지의 위경도 좌표만 있으면 됩니다 (네이버 지도 URL을 복사해올 필요 없음).</p>
   </div>
 </div>
 
@@ -464,10 +464,15 @@
     showMapPins(item);
   }
 
-  // 네이버 Dynamic Map: 출발지/도착지 마커 + 둘을 잇는 점선(직선, 실제 도로 경로 아님).
+  // 네이버 Dynamic Map: 출발지/도착지 마커 + 이동 경로선.
+  // Cloudflare Worker(naver-route-proxy)가 서버에서 NCP Direction5(자동차 전용) API를 대신 호출해준다.
+  // 자동차 일정은 실제 도로 경로선을, 그 외(대중교통/도보 등)는 직선(점선)을 표시한다.
+  const ROUTE_WORKER_URL = "https://naver-route-proxy.9401ndk.workers.dev";
+
   let naverMap = null;
   let mapMarkers = [];
   let mapPolyline = null;
+  let mapRequestSeq = 0;
 
   function initNaverMap() {
     if (typeof naver === "undefined" || !naver.maps) return;
@@ -486,8 +491,30 @@
     }
   }
 
-  function showMapPins(item) {
+  function drawPolyline(item, path, isRealRoute) {
+    mapPolyline = new naver.maps.Polyline({
+      map: naverMap,
+      path,
+      strokeColor: "#03c75a",
+      strokeWeight: isRealRoute ? 4 : 3,
+      strokeStyle: isRealRoute ? "solid" : "shortdash"
+    });
+  }
+
+  async function fetchDrivingPath(item) {
+    const url =
+      ROUTE_WORKER_URL + "/route?slat=" + item.fromLat + "&slng=" + item.fromLng +
+      "&dlat=" + item.toLat + "&dlng=" + item.toLng;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("route fetch failed");
+    const data = await res.json();
+    if (!data.path) throw new Error("no path in response");
+    return data.path.map(([lat, lng]) => new naver.maps.LatLng(lat, lng));
+  }
+
+  async function showMapPins(item) {
     if (!naverMap || !item.fromLat || !item.toLat) return;
+    const mySeq = ++mapRequestSeq;
     clearMapPins();
 
     const fromPos = new naver.maps.LatLng(item.fromLat, item.fromLng);
@@ -496,17 +523,25 @@
     mapMarkers.push(new naver.maps.Marker({ position: fromPos, map: naverMap, title: item.from }));
     mapMarkers.push(new naver.maps.Marker({ position: toPos, map: naverMap, title: item.to }));
 
-    mapPolyline = new naver.maps.Polyline({
-      map: naverMap,
-      path: [fromPos, toPos],
-      strokeColor: "#03c75a",
-      strokeWeight: 3,
-      strokeStyle: "shortdash"
-    });
-
     const bounds = new naver.maps.LatLngBounds(fromPos, fromPos);
     bounds.extend(toPos);
     naverMap.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+
+    const isCarMode = TRANSPORT_SCHEME[item.transport] === "car";
+
+    if (isCarMode) {
+      try {
+        const path = await fetchDrivingPath(item);
+        if (mySeq !== mapRequestSeq) return; // 그 사이 다른 일정이 선택됨
+        drawPolyline(item, path, true);
+        return;
+      } catch (e) {
+        // 서버/네트워크 오류 시 직선으로 대체
+      }
+    }
+
+    if (mySeq !== mapRequestSeq) return;
+    drawPolyline(item, [fromPos, toPos], false);
   }
 
   initNaverMap();
