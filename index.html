@@ -221,12 +221,6 @@
     filter: brightness(0.96);
     transform: translateY(-1px);
   }
-  .naver-link-fallback {
-    font-size: 12px;
-    color: var(--text-sub);
-    text-decoration: underline;
-  }
-
   .map-panel h2 {
     margin: 0 0 4px;
     font-size: 15px;
@@ -373,8 +367,8 @@
     <h3>이용 안내</h3>
     <p>
       ※ "자동차" 일정은 서버(Cloudflare Worker + NCP Direction5)를 통해 실제 도로 경로선(실선)과 실시간 소요시간을 가져와 표시합니다 ("(실시간)" 표시로 구분). 그 외 이동수단은 NCP가 경로를 계산해주지 않아 직선(점선)과 입력해둔 예상 시간이 그대로 표시됩니다.<br><br>
-      "네이버 지도 앱에서 길찾기 열기"는 네이버 지도 앱이 설치되어 있으면 출발지·도착지가 세팅된 길찾기 화면으로 바로 열립니다 (안드로이드는 앱이 없으면 자동으로 스토어로 연결됩니다). iOS에서 앱이 없다면 아무 반응이 없을 수 있는데, 이때는 보조 링크로 목적지 위치만 확인하세요.<br><br>
-      새 일정을 추가할 땐 출발지·도착지의 위경도 좌표만 있으면 됩니다 (네이버 지도 URL을 복사해올 필요 없음).
+      "네이버 지도에서 길찾기 열기" 버튼은 네이버 지도에서 실제로 길찾기를 실행했을 때 나온 URL을 그대로 사용해서, 출발지·도착지가 이미 채워진 길찾기 화면으로 바로 이동합니다.<br><br>
+      새 일정을 추가할 땐 네이버 지도에서 그 두 장소로 길찾기를 한 번 실행한 뒤, 주소창 URL의 좌표·장소ID 값을 복사해서 데이터에 넣어야 정확하게 동작합니다.
     </p>
     <button type="button" class="modal-close-btn" id="noteModalClose">닫기</button>
   </div>
@@ -384,8 +378,11 @@
 <script>
   // 일정 데이터: 날짜(day)별로 이동 항목을 추가하면 자동으로 탭/카드가 생성됩니다.
   //
-  // fromLat/fromLng, toLat/toLng: 출발지·도착지 위경도 좌표. (Geocoding으로 자동 조회하거나,
-  // 지도/GPS 앱에서 확인해서 넣으면 된다 - 네이버 지도 URL을 직접 복사해올 필요 없음)
+  // fromLat/fromLng, toLat/toLng: 마커 표시·실제 경로 조회(자동차)용 위경도 좌표.
+  // fromMapCoord/fromPlaceId, toMapCoord/toPlaceId: 네이버 지도에서 직접 길찾기를 실행한 뒤
+  // 주소창 URL(map.naver.com/p/directions/{좌표},{이름},{장소ID},PLACE_POI/.../-/{모드})에서
+  // 좌표·장소ID를 그대로 복사해 넣은 값. 이게 있어야 "네이버 지도에서 길찾기 열기"가 길찾기 탭에
+  // 출발지·도착지가 정확히 채워진 화면으로 연결된다 (없으면 목적지 검색으로만 대체됨).
   const scheduleData = {
     day1: {
       label: "1일차",
@@ -394,9 +391,13 @@
           from: "유진상가",
           fromLat: 37.591624,
           fromLng: 126.943068,
+          fromMapCoord: "3zgaTm,2AN5Ui",
+          fromPlaceId: "13305205",
           to: "벽산아파트",
           toLat: 37.2652049,
           toLng: 127.0818973,
+          toMapCoord: "3zm63J,2AzsqM",
+          toPlaceId: "19214014",
           transport: "버스",
           duration: "약 1시간 30분", // 예상값 (버스는 실시간 조회 미지원, 실제 소요시간으로 수정 가능)
           memo: "쥬쥬 집에서 도도네로 이동"
@@ -405,9 +406,13 @@
           from: "벽산아파트",
           fromLat: 37.2652049,
           fromLng: 127.0818973,
+          fromMapCoord: "3zm63J,2AzsqM",
+          fromPlaceId: "19214014",
           to: "나탄스테이",
           toLat: 34.6239125,
           toLng: 127.6354580,
+          toMapCoord: "3zJfuI,2yMzYx",
+          toPlaceId: "1574024669",
           transport: "자동차",
           duration: "약 4시간", // 예상값 (자동차라 클릭 시 실시간 값으로 자동 교체됨)
           memo: "도도네에서 나탄스테이로 이동"
@@ -416,13 +421,22 @@
     }
   };
 
-  // 이동 수단 문구 -> 네이버 지도 앱 길찾기 모드 매핑
+  // 이동 수단 문구 -> 지도 관련 모드 매핑
+  // (isCarMode 판정 등에 공용으로 쓰는 값. 웹 길찾기 URL의 모드 표기는 아래 WEB_ROUTE_MODE 별도 사용 - 대중교통이 "public"이 아니라 "transit"으로 다름)
   const TRANSPORT_SCHEME = {
     "도보": "walk",
     "자동차": "car",
     "차": "car",
     "대중교통": "public",
     "버스": "public"
+  };
+
+  const WEB_ROUTE_MODE = {
+    "도보": "walk",
+    "자동차": "car",
+    "차": "car",
+    "대중교통": "transit",
+    "버스": "transit"
   };
 
   let activeDay = Object.keys(scheduleData)[0];
@@ -445,33 +459,29 @@
     return "https://map.naver.com/p/search/" + encodeURIComponent(name);
   }
 
-  // 네이버 지도 앱의 공식 길찾기 딥링크(nmap://route/...). 위경도만 있으면 되고,
-  // 장소별로 매번 네이버 지도에서 URL을 복사해올 필요가 없다.
-  // appname은 공식 문서상 필수 파라미터(모바일 웹에서는 호출 페이지 URL을 넣도록 안내됨).
-  // Android Chrome은 커스텀 스킴을 bare href로 열지 못해 intent:// 로 감싸야 하고(이때 앱 미설치 시
-  // 자동으로 플레이스토어로 연결됨), iOS는 nmap:// 를 그대로 열면 된다.
-  function naverAppRouteUrl(item) {
-    const scheme = TRANSPORT_SCHEME[item.transport] || "public";
-    const params =
-      "slat=" + item.fromLat + "&slng=" + item.fromLng + "&sname=" + encodeURIComponent(item.from) +
-      "&dlat=" + item.toLat + "&dlng=" + item.toLng + "&dname=" + encodeURIComponent(item.to) +
-      "&appname=" + encodeURIComponent(location.href);
-
-    const isAndroid = /android/i.test(navigator.userAgent);
-    if (isAndroid) {
-      return (
-        "intent://route/" + scheme + "?" + params +
-        "#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.nhn.android.nmap;end"
-      );
+  // 네이버 지도에서 실제로 길찾기를 실행했을 때 나온 URL 형식을 그대로 재사용.
+  // 좌표/장소ID가 없는 항목은 목적지 이름 검색으로 대체한다.
+  function naverRouteUrl(item) {
+    if (!item.fromMapCoord || !item.toMapCoord) {
+      return naverPlaceSearchUrl(item.to);
     }
-    return "nmap://route/" + scheme + "?" + params;
+    const mode = WEB_ROUTE_MODE[item.transport] || "car";
+    return (
+      "https://map.naver.com/p/directions/" +
+      item.fromMapCoord + "," + encodeURIComponent(item.from) + "," + item.fromPlaceId + ",PLACE_POI/" +
+      item.toMapCoord + "," + encodeURIComponent(item.to) + "," + item.toPlaceId + ",PLACE_POI/-/" + mode +
+      "?c=15.00,0,0,0,dh"
+    );
   }
 
   function linkButtonsHtml(item) {
+    const hasRealRoute = !!(item.fromMapCoord && item.toMapCoord);
+    const label = hasRealRoute
+      ? "🗺️ 네이버 지도에서 길찾기 열기"
+      : "목적지(" + item.to + ") 위치만 웹에서 검색";
     return `
       <div class="route-actions">
-        <a class="naver-link-btn" href="${naverAppRouteUrl(item)}">🗺️ 네이버 지도 앱에서 길찾기 열기</a>
-        <a class="naver-link-fallback" href="${naverPlaceSearchUrl(item.to)}" target="_blank" rel="noopener noreferrer">앱이 없으면 목적지(${item.to}) 위치만 웹에서 보기</a>
+        <a class="naver-link-btn" href="${naverRouteUrl(item)}" target="_blank" rel="noopener noreferrer">${label}</a>
       </div>
     `;
   }
@@ -531,7 +541,7 @@
         renderMapPanel();
       });
 
-      card.querySelectorAll(".naver-link-btn, .naver-link-fallback").forEach((el) => {
+      card.querySelectorAll(".naver-link-btn").forEach((el) => {
         el.addEventListener("click", (e) => e.stopPropagation());
       });
 
