@@ -374,6 +374,12 @@
     transform: translateY(-1px);
   }
 
+  @media (min-width: 721px) {
+    .schedule-panel {
+      order: -1;
+    }
+  }
+
   @media (max-width: 720px) {
     .layout {
       flex-direction: column;
@@ -381,7 +387,6 @@
     .map-panel {
       position: sticky;
       top: 8px;
-      order: -1;
       z-index: 5;
     }
     #naverMap {
@@ -403,17 +408,17 @@
 </header>
 
 <div class="layout">
-  <div class="schedule-panel">
-    <div class="day-tabs" id="dayTabs"></div>
-    <div class="schedule-list" id="scheduleList"></div>
-  </div>
-
   <div class="map-panel">
     <h2>지도</h2>
     <div id="naverMap"></div>
     <div id="mapSelectedInfo">
-      <p class="empty-hint" style="margin-top:16px;">왼쪽에서 일정을 눌러 보세요.</p>
+      <p class="empty-hint" style="margin-top:16px;">일정을 눌러 보세요.</p>
     </div>
+  </div>
+
+  <div class="schedule-panel">
+    <div class="day-tabs" id="dayTabs"></div>
+    <div class="schedule-list" id="scheduleList"></div>
   </div>
 </div>
 
@@ -422,7 +427,7 @@
     <h3>이용 안내</h3>
     <p>
       <strong>기본 사용법</strong><br>
-      왼쪽 일정 카드를 클릭하면 이동 수단·소요 시간·일정 내용이 펼쳐지고, 오른쪽 지도에 출발지·도착지 마커가 표시됩니다. 카드 안의 "네이버 지도에서 길찾기 열기" 버튼을 누르면 실제 길찾기 화면으로 바로 이동합니다.
+      일정 카드를 클릭하면 이동 수단·소요 시간·일정 내용이 펼쳐지고, 지도에 출발지·도착지 마커가 표시됩니다. 카드 안의 "네이버 지도에서 길찾기 열기" 버튼을 누르면 실제 길찾기 화면으로 바로 이동합니다.
     </p>
     <p>
       <strong>지도에 표시되는 선</strong><br>
@@ -617,7 +622,7 @@
 
   function renderMapPanel() {
     if (selectedIndex === null) {
-      mapSelectedInfoEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">왼쪽에서 일정을 눌러 보세요.</p>';
+      mapSelectedInfoEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">일정을 눌러 보세요.</p>';
       clearMapPins();
       return;
     }
