@@ -31,6 +31,13 @@
     max-width: 920px;
     margin: 0 auto;
   }
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
   header .eyebrow {
     display: inline-block;
     font-size: 12px;
@@ -256,7 +263,8 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-top: 16px;
+    flex-shrink: 0;
+    white-space: nowrap;
     padding: 8px 14px;
     background: none;
     border: 1px solid var(--border);
@@ -334,8 +342,13 @@
 <body>
 
 <header>
-  <span class="eyebrow">TRAVEL SCHEDULE</span>
-  <h1>나의 여행 일정</h1>
+  <div class="header-top">
+    <div>
+      <span class="eyebrow">TRAVEL SCHEDULE</span>
+      <h1>나의 여행 일정</h1>
+    </div>
+    <button type="button" class="info-btn" id="noteInfoBtn">ℹ️ 이용 안내</button>
+  </div>
   <p>일정 카드를 눌러보세요. 이동 수단·시간·내용과 함께, 네이버 지도로 바로 길찾기 할 수 있는 버튼이 나타납니다.</p>
 </header>
 
@@ -352,7 +365,6 @@
     <div id="mapSelectedInfo">
       <p class="empty-hint" style="margin-top:16px;">왼쪽에서 일정을 눌러 보세요.</p>
     </div>
-    <button type="button" class="info-btn" id="noteInfoBtn">ℹ️ 이용 안내</button>
   </div>
 </div>
 
