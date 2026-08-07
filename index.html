@@ -337,6 +337,84 @@
   .modal-overlay[hidden] {
     display: none;
   }
+  .spots-divider {
+    margin: 4px 16px 0;
+    border: none;
+    border-top: 1px dashed var(--border);
+  }
+  .spots-section {
+    padding: 12px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .spots-header {
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: var(--text-sub);
+    padding: 0 2px 4px;
+  }
+  .spot-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: border-color .18s, box-shadow .18s, transform .12s;
+  }
+  .spot-card:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-1px);
+  }
+  .spot-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: var(--shadow-hover);
+  }
+  .spot-icon {
+    font-size: 22px;
+    flex: 0 0 auto;
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .spot-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .spot-name {
+    font-size: 14.5px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .spot-memo {
+    font-size: 12.5px;
+    color: var(--text-sub);
+    line-height: 1.5;
+  }
+  .spot-naver-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(226, 112, 63, 0.28);
+    transition: transform .15s, box-shadow .15s;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .spot-naver-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(226, 112, 63, 0.34);
+  }
   .modal-card {
     background: var(--panel-bg);
     border: 1px solid rgba(241, 221, 201, 0.7);
@@ -514,6 +592,15 @@
           duration: "약 4시간", // 예상값 (자동차라 클릭 시 실시간 값으로 자동 교체됨)
           memo: "도도네에서 나탄스테이로 이동"
         }
+      ],
+      spots: [
+        {
+          name: "여수사시사철삼치회",
+          memo: "숙소 가기 전에 포장해가면 좋을듯!",
+          naverUrl: "https://map.naver.com/p/entry/place/11821464?c=15.00,0,0,0,dh",
+          lat: null,
+          lng: null
+        }
       ]
     }
   };
@@ -538,6 +625,7 @@
 
   let activeDay = Object.keys(scheduleData)[0];
   let selectedIndex = null;
+  let selectedSpotIndex = null;
 
   const dayTabsEl = document.getElementById("dayTabs");
   const scheduleListEl = document.getElementById("scheduleList");
@@ -592,6 +680,7 @@
       tab.addEventListener("click", () => {
         activeDay = dayKey;
         selectedIndex = null;
+        selectedSpotIndex = null;
         renderDayTabs();
         renderScheduleList();
         renderMapPanel();
@@ -637,6 +726,7 @@
 
       card.addEventListener("click", () => {
         selectedIndex = (selectedIndex === idx) ? null : idx;
+        selectedSpotIndex = null;
         renderScheduleList();
         renderMapPanel();
       });
@@ -647,9 +737,57 @@
 
       scheduleListEl.appendChild(card);
     });
+
+    const spots = scheduleData[activeDay].spots;
+    if (spots && spots.length > 0) {
+      const divider = document.createElement("hr");
+      divider.className = "spots-divider";
+      scheduleListEl.appendChild(divider);
+
+      const section = document.createElement("div");
+      section.className = "spots-section";
+
+      const header = document.createElement("div");
+      header.className = "spots-header";
+      header.textContent = "🍽️ 맛집 리스트";
+      section.appendChild(header);
+
+      spots.forEach((spot, idx) => {
+        const spotCard = document.createElement("div");
+        spotCard.className = "spot-card" + (selectedSpotIndex === idx ? " selected" : "");
+
+        spotCard.innerHTML = `
+          <div class="spot-icon">🍽️</div>
+          <div class="spot-info">
+            <div class="spot-name">${spot.name}</div>
+            <div class="spot-memo">${spot.memo}</div>
+          </div>
+          <a class="spot-naver-btn" href="${spot.naverUrl}" target="_blank" rel="noopener noreferrer">지도 보기</a>
+        `;
+
+        spotCard.addEventListener("click", () => {
+          selectedSpotIndex = (selectedSpotIndex === idx) ? null : idx;
+          selectedIndex = null;
+          renderScheduleList();
+          renderSpotOnMap(selectedSpotIndex !== null ? spot : null);
+        });
+
+        spotCard.querySelector(".spot-naver-btn").addEventListener("click", (e) => e.stopPropagation());
+
+        section.appendChild(spotCard);
+      });
+
+      scheduleListEl.appendChild(section);
+    }
   }
 
   function renderMapPanel() {
+    if (selectedSpotIndex !== null) {
+      const spot = scheduleData[activeDay].spots[selectedSpotIndex];
+      renderSpotOnMap(spot);
+      return;
+    }
+
     if (selectedIndex === null) {
       mapSelectedInfoEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">일정을 눌러 보세요.</p>';
       clearMapPins();
@@ -774,6 +912,69 @@
 
     if (mySeq !== mapRequestSeq) return;
     drawPolyline(item, [fromPos, toPos], false);
+  }
+
+  function geocodeByName(name) {
+    return new Promise((resolve, reject) => {
+      naver.maps.Service.geocode({ query: name }, (status, response) => {
+        if (status !== naver.maps.Service.Status.OK) { reject(new Error("geocode failed")); return; }
+        const items = response.v2.addresses;
+        if (!items || items.length === 0) { reject(new Error("no results")); return; }
+        resolve({ lat: parseFloat(items[0].y), lng: parseFloat(items[0].x) });
+      });
+    });
+  }
+
+  const SPOT_MARKER_ICON = {
+    content: '<div style="background:#e2703f;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 3px 10px rgba(226,112,63,0.45);">🍽️</div>',
+    anchor: new naver.maps.Point(17, 17)
+  };
+
+  async function renderSpotOnMap(spot) {
+    if (!spot) {
+      mapSelectedInfoEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">일정을 눌러 보세요.</p>';
+      clearMapPins();
+      return;
+    }
+
+    mapSelectedInfoEl.innerHTML = `
+      <div class="map-selected-info">
+        <div class="route-line">🍽️ ${spot.name}</div>
+        <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">${spot.memo}</div>
+        <div class="route-actions" style="margin-top:12px;">
+          <a class="naver-link-btn" href="${spot.naverUrl}" target="_blank" rel="noopener noreferrer">🗺️ 네이버 지도에서 보기</a>
+        </div>
+      </div>
+    `;
+
+    clearMapPins();
+
+    const showMarker = (lat, lng) => {
+      const pos = new naver.maps.LatLng(lat, lng);
+      mapMarkers.push(new naver.maps.Marker({ position: pos, map: naverMap, title: spot.name, icon: SPOT_MARKER_ICON }));
+      naverMap.setCenter(pos);
+      naverMap.setZoom(16);
+    };
+
+    if (spot.lat && spot.lng) {
+      showMarker(spot.lat, spot.lng);
+      return;
+    }
+
+    try {
+      const { lat, lng } = await geocodeByName(spot.name);
+      spot.lat = lat;
+      spot.lng = lng;
+      showMarker(lat, lng);
+    } catch (e) {
+      const infoEl = mapSelectedInfoEl.querySelector(".map-selected-info");
+      if (infoEl) {
+        const note = document.createElement("div");
+        note.style.cssText = "font-size:12px;color:var(--text-sub);margin-top:8px;";
+        note.textContent = "지도에서 위치를 불러오지 못했습니다. 네이버 지도에서 확인해 주세요.";
+        infoEl.appendChild(note);
+      }
+    }
   }
 
   // 이용 안내 팝업
