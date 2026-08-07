@@ -750,7 +750,7 @@
 
       const header = document.createElement("div");
       header.className = "spots-header";
-      header.textContent = "🍽️ 맛집 리스트";
+      header.textContent = "📍 가볼만한 곳";
       section.appendChild(header);
 
       spots.forEach((spot, idx) => {
@@ -758,7 +758,7 @@
         spotCard.className = "spot-card" + (selectedSpotIndex === idx ? " selected" : "");
 
         spotCard.innerHTML = `
-          <div class="spot-icon">🍽️</div>
+          <div class="spot-icon">📍</div>
           <div class="spot-info">
             <div class="spot-name">${spot.name}</div>
             <div class="spot-memo">${spot.memo}</div>
@@ -927,7 +927,7 @@
   }
 
   const SPOT_MARKER_ICON = {
-    content: '<div style="background:#e2703f;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 3px 10px rgba(226,112,63,0.45);">🍽️</div>',
+    content: '<div style="background:#e2703f;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 3px 10px rgba(226,112,63,0.45);">📍</div>',
     anchor: new naver.maps.Point(17, 17)
   };
 
@@ -940,7 +940,7 @@
 
     mapSelectedInfoEl.innerHTML = `
       <div class="map-selected-info">
-        <div class="route-line">🍽️ ${spot.name}</div>
+        <div class="route-line">📍 ${spot.name}</div>
         <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">${spot.memo}</div>
         <div class="route-actions" style="margin-top:12px;">
           <a class="naver-link-btn" href="${spot.naverUrl}" target="_blank" rel="noopener noreferrer">🗺️ 네이버 지도에서 보기</a>
