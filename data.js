@@ -156,6 +156,14 @@ const scheduleData = {
         naverUrl: "https://map.naver.com/p/entry/place/1648862917?c=15.30,0,0,0,dh",
         lat: 34.7408108,
         lng: 127.7359230
+      },
+      {
+        name: "이순신 수제버거",
+        type: "restaurant",
+        memo: "여기도 이순신광장쪽!",
+        naverUrl: "https://map.naver.com/p/entry/place/38010379",
+        lat: 34.7402221,
+        lng: 127.7356832
       }
     ]
   }
