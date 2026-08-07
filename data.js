@@ -93,6 +93,14 @@ const scheduleData = {
         naverUrl: "https://map.naver.com/p/search/%EC%9D%B4%EC%88%9C%EC%8B%A0%EA%B4%91%EC%9E%A5?c=16.06,0,0,0,dh",
         lat: 34.7382897,
         lng: 127.7386760
+      },
+      {
+        name: "낭만포차거리",
+        type: "bar",
+        memo: "넘 덥고 밤에 가야해서 가능할지 모르겠지만 유명해서 추가!",
+        naverUrl: "https://map.naver.com/p/entry/place/49252227?c=16.06,0,0,0,dh",
+        lat: 34.7379142,
+        lng: 127.7468923
       }
     ]
   }
