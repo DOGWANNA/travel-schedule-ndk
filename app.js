@@ -46,7 +46,7 @@ function loadSpotImage(spotCard, naverUrl) {
   const placeId = extractPlaceId(naverUrl);
   if (!placeId) return;
 
-  const cacheKey = 'simg_' + placeId;
+  const cacheKey = 'simg_v2_' + placeId;
   const cached = localStorage.getItem(cacheKey);
   if (cached !== null) {
     if (cached) applySpotImage(spotCard, cached);
