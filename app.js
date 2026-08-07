@@ -35,6 +35,42 @@ function linkButtonsHtml(item) {
   `;
 }
 
+// ─── 장소 이미지 ──────────────────────────────────────────────────────────────
+
+function extractPlaceId(naverUrl) {
+  const m = naverUrl.match(/\/place\/(\d+)/);
+  return m ? m[1] : null;
+}
+
+function loadSpotImage(spotCard, naverUrl) {
+  const placeId = extractPlaceId(naverUrl);
+  if (!placeId) return;
+
+  const cacheKey = 'simg_' + placeId;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached !== null) {
+    if (cached) applySpotImage(spotCard, cached);
+    return;
+  }
+
+  fetch(PLACE_IMAGE_WORKER_URL + '/place-image?id=' + placeId)
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      const url = (data && data.imageUrl) ? data.imageUrl : '';
+      try { localStorage.setItem(cacheKey, url); } catch (_) {}
+      if (url) applySpotImage(spotCard, url);
+    })
+    .catch(function() {});
+}
+
+function applySpotImage(spotCard, url) {
+  const img = spotCard.querySelector('.spot-thumb');
+  if (!img) return;
+  img.onload = function() { img.classList.add('loaded'); };
+  img.onerror = function() {};
+  img.src = url;
+}
+
 // ─── 렌더링 ────────────────────────────────────────────────────────────────────
 
 function renderDayTabs() {
@@ -125,13 +161,18 @@ function renderScheduleList() {
       spotCard.className = "spot-card" + (selectedSpotIndex === idx ? " selected" : "");
 
       spotCard.innerHTML = `
-        <div class="spot-icon">${SPOT_TYPE_ICON[spot.type] || SPOT_TYPE_ICON.default}</div>
+        <div class="spot-thumb-wrap">
+          <span class="spot-icon">${SPOT_TYPE_ICON[spot.type] || SPOT_TYPE_ICON.default}</span>
+          <img class="spot-thumb" alt="${spot.name}" />
+        </div>
         <div class="spot-info">
           <div class="spot-name">${spot.name}</div>
           <div class="spot-memo">${spot.memo}</div>
         </div>
         <a class="spot-naver-btn" href="${spot.naverUrl}" target="_blank" rel="noopener noreferrer">지도 보기</a>
       `;
+
+      loadSpotImage(spotCard, spot.naverUrl);
 
       spotCard.addEventListener("click", () => {
         selectedSpotIndex = (selectedSpotIndex === idx) ? null : idx;
