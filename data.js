@@ -129,7 +129,7 @@ const scheduleData = {
         name: "이순신광장",
         type: "attraction",
         memo: "광장 근처에 소품샵, 카페 등등 구경거리!",
-        naverUrl: "https://map.naver.com/p/search/%EC%9D%B4%EC%88%9C%EC%8B%A0%EA%B4%91%EC%9E%A5?c=16.06,0,0,0,dh",
+        naverUrl: "https://map.naver.com/p/entry/place/17281819?c=16.06,0,0,0,dh",
         lat: 34.7382897,
         lng: 127.7386760
       },
