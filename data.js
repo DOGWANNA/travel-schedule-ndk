@@ -101,6 +101,14 @@ const scheduleData = {
         naverUrl: "https://map.naver.com/p/entry/place/49252227?c=16.06,0,0,0,dh",
         lat: 34.7379142,
         lng: 127.7468923
+      },
+      {
+        name: "꼬북샌드",
+        type: "bakery",
+        memo: "이순신 광장 근처. 여수오면 선물용으로 많이 사가나봥",
+        naverUrl: "https://map.naver.com/p/entry/place/1410396555?c=16.06,0,0,0,dh",
+        lat: 34.7396079,
+        lng: 127.7325073
       }
     ]
   }
