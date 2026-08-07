@@ -346,6 +346,11 @@ header h1 {
   line-height: 1;
   position: relative;
   z-index: 1;
+  transition: opacity .3s ease;
+}
+.spot-thumb-wrap:has(.spot-thumb.loaded) .spot-icon {
+  opacity: 0;
+  pointer-events: none;
 }
 .spot-thumb {
   position: absolute;

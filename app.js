@@ -53,7 +53,7 @@ function loadSpotImage(spotCard, naverUrl) {
     return;
   }
 
-  fetch(PLACE_IMAGE_WORKER_URL + '/place-image?id=' + placeId)
+  fetch(PLACE_IMAGE_WORKER_URL + '/v2/place-image?id=' + placeId)
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
       const url = (data && data.imageUrl) ? data.imageUrl : '';
