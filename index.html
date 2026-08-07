@@ -596,6 +596,7 @@
       spots: [
         {
           name: "여수사시사철삼치회",
+          type: "restaurant",
           address: "전남 여수시 교동남1길 5-11",
           memo: "숙소 가기 전에 포장해가면 좋을듯!",
           naverUrl: "https://map.naver.com/p/entry/place/11821464?c=15.00,0,0,0,dh",
@@ -631,6 +632,22 @@
   const dayTabsEl = document.getElementById("dayTabs");
   const scheduleListEl = document.getElementById("scheduleList");
   const mapSelectedInfoEl = document.getElementById("mapSelectedInfo");
+
+  const SPOT_TYPE_ICON = {
+    restaurant: "🍽️",
+    cafe: "☕",
+    bakery: "🥐",
+    bar: "🍺",
+    seafood: "🐟",
+    attraction: "🏛️",
+    museum: "🎨",
+    nature: "🌿",
+    beach: "🏖️",
+    park: "🌳",
+    shopping: "🛍️",
+    accommodation: "🏨",
+    default: "📍"
+  };
 
   const TRANSPORT_ICON = {
     "도보": "🚶",
@@ -758,7 +775,7 @@
         spotCard.className = "spot-card" + (selectedSpotIndex === idx ? " selected" : "");
 
         spotCard.innerHTML = `
-          <div class="spot-icon">📍</div>
+          <div class="spot-icon">${SPOT_TYPE_ICON[spot.type] || SPOT_TYPE_ICON.default}</div>
           <div class="spot-info">
             <div class="spot-name">${spot.name}</div>
             <div class="spot-memo">${spot.memo}</div>
@@ -926,10 +943,13 @@
     });
   }
 
-  const SPOT_MARKER_ICON = {
-    content: '<div style="background:#e2703f;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 3px 10px rgba(226,112,63,0.45);">📍</div>',
-    anchor: new naver.maps.Point(17, 17)
-  };
+  function spotMarkerIcon(type) {
+    const emoji = SPOT_TYPE_ICON[type] || SPOT_TYPE_ICON.default;
+    return {
+      content: `<div style="background:#e2703f;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 3px 10px rgba(226,112,63,0.45);">${emoji}</div>`,
+      anchor: new naver.maps.Point(17, 17)
+    };
+  }
 
   async function renderSpotOnMap(spot) {
     if (!spot) {
@@ -940,7 +960,7 @@
 
     mapSelectedInfoEl.innerHTML = `
       <div class="map-selected-info">
-        <div class="route-line">📍 ${spot.name}</div>
+        <div class="route-line">${SPOT_TYPE_ICON[spot.type] || SPOT_TYPE_ICON.default} ${spot.name}</div>
         <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">${spot.memo}</div>
         <div class="route-actions" style="margin-top:12px;">
           <a class="naver-link-btn" href="${spot.naverUrl}" target="_blank" rel="noopener noreferrer">🗺️ 네이버 지도에서 보기</a>
@@ -952,7 +972,7 @@
 
     const showMarker = (lat, lng) => {
       const pos = new naver.maps.LatLng(lat, lng);
-      mapMarkers.push(new naver.maps.Marker({ position: pos, map: naverMap, title: spot.name, icon: SPOT_MARKER_ICON }));
+      mapMarkers.push(new naver.maps.Marker({ position: pos, map: naverMap, title: spot.name, icon: spotMarkerIcon(spot.type) }));
       naverMap.setCenter(pos);
       naverMap.setZoom(16);
     };
