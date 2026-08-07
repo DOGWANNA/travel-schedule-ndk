@@ -60,8 +60,10 @@ function renderScheduleList() {
   const items = scheduleData[activeDay].items;
 
   if (items.length === 0) {
-    scheduleListEl.innerHTML = '<p class="empty-hint">등록된 일정이 없습니다.</p>';
-    return;
+    const empty = document.createElement("p");
+    empty.className = "empty-hint";
+    empty.textContent = "등록된 이동 일정이 없습니다.";
+    scheduleListEl.appendChild(empty);
   }
 
   items.forEach((item, idx) => {

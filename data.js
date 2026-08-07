@@ -65,6 +65,28 @@ const scheduleData = {
         lng: 127.7149526
       }
     ]
+  },
+  day2: {
+    label: "2일차",
+    items: [],
+    spots: [
+      {
+        name: "꽃돌게장1번가",
+        type: "restaurant",
+        memo: "유명한 게장집! 리필 바에 돌게장은 무한으로 먹을 수 있어",
+        naverUrl: "https://map.naver.com/p/entry/place/36469012?c=13.27,0,0,0,dh",
+        lat: 34.7330688,
+        lng: 127.7261044
+      },
+      {
+        name: "오동도",
+        type: "park",
+        memo: "1~2시간 산책하기 좋은 곳. 날씨가 괜찮다면 좋을듯!",
+        naverUrl: "https://map.naver.com/p/entry/place/11491916?c=13.27,0,0,0,dh",
+        lat: 34.7450350,
+        lng: 127.7670926
+      }
+    ]
   }
 };
 
