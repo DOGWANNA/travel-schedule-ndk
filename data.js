@@ -68,7 +68,23 @@ const scheduleData = {
   },
   day2: {
     label: "2일차",
-    items: [],
+    items: [
+      {
+        from: "이순신광장",
+        fromLat: 34.7382897,
+        fromLng: 127.7386760,
+        fromMapCoord: "3zNt8t,2yRqRB",
+        fromPlaceId: "17281819",
+        to: "유진상가",
+        toLat: 37.591624,
+        toLng: 126.943068,
+        toMapCoord: "3zgaTm,2AN5Ui",
+        toPlaceId: "13305205",
+        transport: "자동차",
+        duration: "약 4시간",
+        memo: "여수에서 효주네로 출발!"
+      }
+    ],
     spots: [
       {
         name: "꽃돌게장1번가",
