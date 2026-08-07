@@ -148,6 +148,14 @@ const scheduleData = {
         naverUrl: "https://map.naver.com/p/entry/place/1410396555?c=16.06,0,0,0,dh",
         lat: 34.7396079,
         lng: 127.7325073
+      },
+      {
+        name: "바다김밥 중앙본점",
+        type: "restaurant",
+        memo: "갓김치가 들어간 김밥이랭! 이순신 광장 쪽",
+        naverUrl: "https://map.naver.com/p/entry/place/1648862917?c=15.30,0,0,0,dh",
+        lat: 34.7408108,
+        lng: 127.7359230
       }
     ]
   }
