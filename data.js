@@ -63,6 +63,14 @@ const scheduleData = {
         naverUrl: "https://map.naver.com/p/entry/place/11605057?c=14.43,0,0,0,dh",
         lat: 34.7579626,
         lng: 127.7149526
+      },
+      {
+        name: "카페 마애",
+        type: "cafe",
+        memo: "우리 숙소 바로옆 카페!",
+        naverUrl: "https://map.naver.com/p/entry/place/1602030574?c=17.07,0,0,0,dh",
+        lat: 34.6238073,
+        lng: 127.6359557
       }
     ]
   },
