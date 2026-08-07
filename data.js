@@ -83,6 +83,21 @@ const scheduleData = {
         transport: "자동차",
         duration: "약 4시간",
         memo: "여수에서 효주네로 출발!"
+      },
+      {
+        from: "유진상가",
+        fromLat: 37.591624,
+        fromLng: 126.943068,
+        fromMapCoord: "3zgaTm,2AN5Ui",
+        fromPlaceId: "13305205",
+        to: "벽산아파트",
+        toLat: 37.2652049,
+        toLng: 127.0818973,
+        toMapCoord: "3zm63J,2AzsqM",
+        toPlaceId: "19214014",
+        transport: "자동차",
+        duration: "약 40분",
+        memo: "효주 내려주고 나도 집으로!"
       }
     ],
     spots: [
