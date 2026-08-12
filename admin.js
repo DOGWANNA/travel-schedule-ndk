@@ -54,6 +54,27 @@ async function searchCoords(name) {
   return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
 }
 
+function naverCToWgs84(x, y) {
+  const R = 6378137;
+  const lng = x / R * (180 / Math.PI);
+  const lat = (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * (180 / Math.PI);
+  return { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
+}
+
+function guessSpotType(name) {
+  if (!name) return 'restaurant';
+  if (/카페|커피|coffee|cafe/i.test(name)) return 'cafe';
+  if (/베이커리|빵집|bakery/i.test(name)) return 'bakery';
+  if (/호텔|펜션|모텔|게스트하우스|리조트/i.test(name)) return 'accommodation';
+  if (/해수욕장|해변|비치|beach/i.test(name)) return 'beach';
+  if (/공원|park/i.test(name)) return 'park';
+  if (/박물관|미술관/i.test(name)) return 'museum';
+  if (/마트|시장|쇼핑몰|shopping/i.test(name)) return 'shopping';
+  if (/횟집|해물|해산물|수산/i.test(name)) return 'seafood';
+  if (/술집|포차|이자카야/i.test(name)) return 'bar';
+  return 'restaurant';
+}
+
 function parseNaverDirectionsUrl(url) {
   const m = url.match(/\/directions\/([A-Za-z0-9]+,[A-Za-z0-9]+),([^,]+),(\d+),PLACE_POI\/([A-Za-z0-9]+,[A-Za-z0-9]+),([^,]+),(\d+),PLACE_POI\/-\/([a-z]+)/);
   if (!m) return null;
@@ -68,11 +89,15 @@ function parseNaverDirectionsUrl(url) {
 function parseNaverPlaceUrl(url) {
   const idMatch = url.match(/\/place\/(\d+)/);
   if (!idMatch) return null;
-  const nameMatch = url.match(/\/place\/\d+\/([^/?#]+)/);
-  return {
-    placeId: idMatch[1],
-    name: nameMatch ? decodeURIComponent(nameMatch[1]) : null
-  };
+  const placeId = idMatch[1];
+  let lat = null, lng = null;
+  const cMatch = url.match(/[?&]c=([0-9.]+),([0-9.]+)/);
+  if (cMatch) {
+    const wgs = naverCToWgs84(parseFloat(cMatch[1]), parseFloat(cMatch[2]));
+    lat = wgs.lat;
+    lng = wgs.lng;
+  }
+  return { placeId, lat, lng };
 }
 
 function val(id) { return document.getElementById(id).value.trim(); }
@@ -425,34 +450,63 @@ function confirmDeleteItem(item) {
 function spotFormHtml(spot) {
   const v = spot || {};
   const typeMap = { restaurant:'🍽️ 음식점', cafe:'☕ 카페', bakery:'🥐 베이커리', bar:'🍺 바/술집', seafood:'🐟 해산물', attraction:'🏛️ 명소', museum:'🎨 박물관', nature:'🌿 자연', beach:'🏖️ 해변', park:'🌳 공원', shopping:'🛍️ 쇼핑', accommodation:'🏨 숙소' };
-  const typeOpts = Object.keys(typeMap).map(function(t) {
-    return '<option value="' + t + '"' + (v.type === t ? ' selected' : '') + '>' + typeMap[t] + '</option>';
-  }).join('');
+
+  const typeHtml = spot
+    ? '<div class="form-field"><label>종류</label><select id="f_type">' +
+      Object.keys(typeMap).map(function(t) {
+        return '<option value="' + t + '"' + (v.type === t ? ' selected' : '') + '>' + typeMap[t] + '</option>';
+      }).join('') +
+      '</select></div>'
+    : '<input type="hidden" id="f_type" value="' + esc(v.type || 'restaurant') + '">';
+
   return (
-    '<div class="form-field"><label>장소 이름 <span class="label-hint">필수 · 입력 후 탭 누르면 좌표 자동 검색</span></label>' +
-    '<input type="text" id="f_name" value="' + esc(v.name || '') + '" placeholder="예: 꽃돌게장1번가" autocomplete="off"></div>' +
+    '<div class="form-section">네이버 지도 URL</div>' +
+    '<p class="url-guide">URL 붙여넣고 추출 → 좌표 자동 입력. 장소명은 직접 입력하세요.</p>' +
+    '<div class="url-parse-row"><input type="text" id="f_naver_url" value="' + esc(v.naver_url || '') + '" placeholder="https://map.naver.com/p/entry/place/12345?c=..."><button type="button" class="btn-coord" id="parseSpotUrlBtn">추출</button></div>' +
     '<div class="coord-status" id="coordStatus"></div>' +
+    '<div class="form-field"><label>장소 이름</label>' +
+    '<input type="text" id="f_name" value="' + esc(v.name || '') + '" placeholder="예: 꽃돌게장1번가" autocomplete="off"></div>' +
     '<div class="coord-row">' +
-    '<div class="form-field" style="flex:1"><label>위도 <span class="label-hint">자동 검색 · 틀리면 직접 수정</span></label>' +
-    '<input type="number" id="f_lat" value="' + (v.lat || '') + '" step="any" placeholder="예: 34.7604"></div>' +
+    '<div class="form-field" style="flex:1"><label>위도 <span class="label-hint">직접 수정 가능</span></label>' +
+    '<input type="number" id="f_lat" value="' + (v.lat || '') + '" step="any" placeholder="34.7604"></div>' +
     '<div class="form-field" style="flex:1"><label>경도</label>' +
-    '<input type="number" id="f_lng" value="' + (v.lng || '') + '" step="any" placeholder="예: 127.6622"></div>' +
+    '<input type="number" id="f_lng" value="' + (v.lng || '') + '" step="any" placeholder="127.6622"></div>' +
     '</div>' +
-    '<p class="url-guide">좌표가 틀린 경우 아래 URL로 네이버 지도를 열어 실제 위치를 확인 후 직접 입력해주세요.</p>' +
-    '<div class="form-field"><label>종류</label><select id="f_type">' + typeOpts + '</select></div>' +
-    '<div class="form-field"><label>네이버 지도 URL <span class="label-hint">이미지·지도 링크용 (선택)</span></label>' +
-    '<input type="text" id="f_naver_url" value="' + esc(v.naver_url || '') + '" placeholder="https://map.naver.com/p/entry/place/..."></div>' +
+    typeHtml +
     '<div class="form-field"><label>메모</label><textarea id="f_memo" placeholder="예: 유명한 게장집!">' + esc(v.memo || '') + '</textarea></div>'
   );
 }
 
-function attachSpotFormEvents() {
+function attachSpotFormEvents(isEdit) {
   const statusEl = document.getElementById('coordStatus');
+
+  document.getElementById('parseSpotUrlBtn').addEventListener('click', function() {
+    const url = val('f_naver_url');
+    if (!url) { alert('URL을 먼저 입력해주세요.'); return; }
+    const parsed = parseNaverPlaceUrl(url);
+    if (!parsed) {
+      statusEl.textContent = '⚠️ 네이버 지도 장소 URL이 아닙니다';
+      statusEl.className = 'coord-status warn';
+      return;
+    }
+    if (parsed.lat && parsed.lng) {
+      document.getElementById('f_lat').value = parsed.lat;
+      document.getElementById('f_lng').value = parsed.lng;
+      statusEl.textContent = '✅ 좌표 추출 완료 — 장소 이름을 직접 입력해주세요';
+      statusEl.className = 'coord-status found';
+    } else {
+      statusEl.textContent = '⚠️ URL에 좌표 없음 — 장소명 입력 후 자동 검색됩니다';
+      statusEl.className = 'coord-status warn';
+    }
+  });
 
   document.getElementById('f_name').addEventListener('blur', async function() {
     const name = this.value.trim();
     if (!name) return;
-    if (document.getElementById('f_lat').value) return; // 이미 좌표 있으면 덮어쓰지 않음
+    if (!isEdit) {
+      document.getElementById('f_type').value = guessSpotType(name);
+    }
+    if (document.getElementById('f_lat').value) return;
     statusEl.textContent = '🔍 좌표 자동 검색 중...';
     statusEl.className = 'coord-status searching';
     try {
@@ -474,13 +528,15 @@ function attachSpotFormEvents() {
 }
 
 function openSpotModal(spot, count) {
+  const isEdit = !!spot;
   openFormModal(spot ? '장소 수정' : '장소 추가', spotFormHtml(spot), async function() {
     const name = val('f_name');
     if (!name) throw new Error('장소 이름을 입력해주세요');
     const data = {
       day_id: currentDay.id,
       order_num: spot ? spot.order_num : count + 1,
-      name, type: document.getElementById('f_type').value,
+      name,
+      type: document.getElementById('f_type').value || 'restaurant',
       memo: val('f_memo') || null,
       naver_url: val('f_naver_url') || null,
       lat: fval('f_lat'), lng: fval('f_lng')
@@ -489,7 +545,7 @@ function openSpotModal(spot, count) {
     else await apiPost('spots', data);
     showDayView(currentDay);
   });
-  attachSpotFormEvents();
+  attachSpotFormEvents(isEdit);
   document.getElementById('f_name').focus();
 }
 
