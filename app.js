@@ -1,4 +1,6 @@
-let activeDay = Object.keys(scheduleData)[0];
+let scheduleData = {};
+let activeTripId = null;
+let activeDay = null;
 let selectedIndex = null;
 let selectedSpotIndex = null;
 let spotPage = 0;
@@ -96,6 +98,7 @@ function renderDayTabs() {
 
 function renderScheduleList() {
   scheduleListEl.innerHTML = "";
+  if (!activeDay || !scheduleData[activeDay]) return;
   const items = scheduleData[activeDay].items;
 
   if (items.length === 0) {
@@ -411,6 +414,21 @@ document.addEventListener("keydown", (e) => {
 // ─── 초기화 ────────────────────────────────────────────────────────────────────
 
 initNaverMap();
-renderDayTabs();
-renderScheduleList();
-renderMapPanel();
+
+async function init() {
+  scheduleListEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">일정을 불러오는 중...</p>';
+  try {
+    const result = await fetchScheduleData();
+    activeTripId = result.tripId;
+    scheduleData = result.days;
+    activeDay = Object.keys(scheduleData)[0] || null;
+  } catch (e) {
+    scheduleListEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">데이터를 불러오지 못했습니다.</p>';
+    return;
+  }
+  renderDayTabs();
+  renderScheduleList();
+  renderMapPanel();
+}
+
+init();
