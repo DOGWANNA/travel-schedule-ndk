@@ -91,11 +91,17 @@ function parseNaverPlaceUrl(url) {
   if (!idMatch) return null;
   const placeId = idMatch[1];
   let lat = null, lng = null;
+  // c= 파라미터: 7값 형식(x,y,zoom,...) vs 5값 형식(zoom,pitch,...) 구분
+  // 실제 좌표(Web Mercator)는 백만 단위 → x > 1000으로 판별
   const cMatch = url.match(/[?&]c=([0-9.]+),([0-9.]+)/);
   if (cMatch) {
-    const wgs = naverCToWgs84(parseFloat(cMatch[1]), parseFloat(cMatch[2]));
-    lat = wgs.lat;
-    lng = wgs.lng;
+    const x = parseFloat(cMatch[1]);
+    const y = parseFloat(cMatch[2]);
+    if (x > 1000 && y > 1000) {
+      const wgs = naverCToWgs84(x, y);
+      lat = wgs.lat;
+      lng = wgs.lng;
+    }
   }
   return { placeId, lat, lng };
 }
@@ -495,7 +501,7 @@ function attachSpotFormEvents(isEdit) {
       statusEl.textContent = '✅ 좌표 추출 완료 — 장소 이름을 직접 입력해주세요';
       statusEl.className = 'coord-status found';
     } else {
-      statusEl.textContent = '⚠️ URL에 좌표 없음 — 장소명 입력 후 자동 검색됩니다';
+      statusEl.textContent = '⚠️ 모바일 공유 URL은 좌표가 없습니다 — 장소명 입력 시 자동 검색됩니다';
       statusEl.className = 'coord-status warn';
     }
   });
