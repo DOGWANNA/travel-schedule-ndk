@@ -326,12 +326,26 @@ function updateDurationDisplay(durationMs) {
 }
 
 async function showMapPins(item) {
-  if (!naverMap || !item.fromLat || !item.toLat) return;
+  if (!naverMap) return;
+
+  // lat/lng 없으면 mapCoord(Web Mercator)에서 변환
+  let fromLat = item.fromLat, fromLng = item.fromLng;
+  let toLat = item.toLat, toLng = item.toLng;
+  if (!fromLat && item.fromMapCoord) {
+    const c = mapCoordToLatLng(item.fromMapCoord);
+    if (c) { fromLat = c.lat; fromLng = c.lng; }
+  }
+  if (!toLat && item.toMapCoord) {
+    const c = mapCoordToLatLng(item.toMapCoord);
+    if (c) { toLat = c.lat; toLng = c.lng; }
+  }
+
+  if (!fromLat || !toLat) return;
   const mySeq = ++mapRequestSeq;
   clearMapPins();
 
-  const fromPos = new naver.maps.LatLng(item.fromLat, item.fromLng);
-  const toPos = new naver.maps.LatLng(item.toLat, item.toLng);
+  const fromPos = new naver.maps.LatLng(fromLat, fromLng);
+  const toPos = new naver.maps.LatLng(toLat, toLng);
 
   mapMarkers.push(new naver.maps.Marker({ position: fromPos, map: naverMap, title: item.from }));
   mapMarkers.push(new naver.maps.Marker({ position: toPos, map: naverMap, title: item.to }));
@@ -344,7 +358,7 @@ async function showMapPins(item) {
 
   if (isCarMode) {
     try {
-      const { path, durationMs } = await fetchDrivingRoute(item);
+      const { path, durationMs } = await fetchDrivingRoute({ ...item, fromLat, fromLng, toLat, toLng });
       if (mySeq !== mapRequestSeq) return;
       drawPolyline(item, path, true);
       if (durationMs) updateDurationDisplay(durationMs);

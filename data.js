@@ -116,6 +116,19 @@ const SPOT_TYPE_ICON = {
   default:       "📍"
 };
 
+// Naver 방향 URL의 mapCoord(Web Mercator 정수 쌍 "x,y") → WGS84 {lat, lng}
+function mapCoordToLatLng(mapCoord) {
+  if (!mapCoord) return null;
+  const parts = mapCoord.split(',').map(parseFloat);
+  if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+  const x = parts[0], y = parts[1];
+  if (x < 1000 || y < 1000) return null; // zoom 값이면 무시
+  const R = 6378137;
+  const lng = x / R * (180 / Math.PI);
+  const lat = (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * (180 / Math.PI);
+  return { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
+}
+
 const ROUTE_WORKER_URL = "https://naver-route-proxy.9401ndk.workers.dev";
 const PLACE_IMAGE_WORKER_URL = "https://place-image-proxy.9401ndk.workers.dev";
 const PLACE_COORD_WORKER_URL = "https://place-coord-proxy.9401ndk.workers.dev";
