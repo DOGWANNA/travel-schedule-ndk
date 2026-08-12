@@ -2,7 +2,7 @@ let activeDay = Object.keys(scheduleData)[0];
 let selectedIndex = null;
 let selectedSpotIndex = null;
 let spotPage = 0;
-const SPOTS_PER_PAGE = 10;
+const SPOTS_PER_PAGE = 5;
 
 const dayTabsEl = document.getElementById("dayTabs");
 const scheduleListEl = document.getElementById("scheduleList");
