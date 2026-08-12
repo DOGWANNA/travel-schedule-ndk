@@ -519,11 +519,15 @@ function attachSpotFormEvents(isEdit) {
       statusEl.textContent = '🔍 좌표 조회 중...';
       statusEl.className = 'coord-status searching';
       try {
-        const coords = await fetchPlaceCoordById(parsed.placeId);
-        if (coords) {
-          document.getElementById('f_lat').value = coords.lat;
-          document.getElementById('f_lng').value = coords.lng;
-          statusEl.textContent = '✅ 좌표 추출 완료 — 장소 이름을 직접 입력해주세요';
+        const info = await fetchPlaceCoordById(parsed.placeId);
+        if (info) {
+          document.getElementById('f_lat').value = info.lat;
+          document.getElementById('f_lng').value = info.lng;
+          if (!isEdit && info.type) {
+            document.getElementById('f_type').value = info.type;
+          }
+          const nameHint = info.name ? ' (' + info.name + ')' : '';
+          statusEl.textContent = '✅ 좌표 추출 완료' + nameHint + ' — 장소 이름을 직접 입력해주세요';
           statusEl.className = 'coord-status found';
         } else {
           statusEl.textContent = '⚠️ 좌표 조회 실패 — 장소명 입력 시 자동 검색됩니다';
