@@ -78,6 +78,21 @@ const scheduleData = {
     label: "2일차",
     items: [
       {
+        from: "나탄스테이",
+        fromLat: 34.6239125,
+        fromLng: 127.6354580,
+        fromMapCoord: "3zJfuI,2yMzYx",
+        fromPlaceId: "1574024669",
+        to: "이순신광장 공영주차장",
+        toLat: 34.7394476,
+        toLng: 127.7364569,
+        toMapCoord: "3zNufW,2yRqwd",
+        toPlaceId: "1074132927",
+        transport: "자동차",
+        duration: "약 1시간",
+        memo: "숙소에서 여수 시내로 이동!"
+      },
+      {
         from: "이순신광장",
         fromLat: 34.7382897,
         fromLng: 127.7386760,
