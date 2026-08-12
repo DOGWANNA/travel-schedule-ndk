@@ -54,6 +54,18 @@ async function searchCoords(name) {
   return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
 }
 
+async function fetchPlaceCoordById(placeId) {
+  try {
+    const res = await fetch(PLACE_COORD_WORKER_URL + '?id=' + placeId);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.lat && data.lng) return data;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function naverCToWgs84(x, y) {
   const R = 6378137;
   const lng = x / R * (180 / Math.PI);
@@ -486,7 +498,7 @@ function spotFormHtml(spot) {
 function attachSpotFormEvents(isEdit) {
   const statusEl = document.getElementById('coordStatus');
 
-  document.getElementById('parseSpotUrlBtn').addEventListener('click', function() {
+  document.getElementById('parseSpotUrlBtn').addEventListener('click', async function() {
     const url = val('f_naver_url');
     if (!url) { alert('URL을 먼저 입력해주세요.'); return; }
     const parsed = parseNaverPlaceUrl(url);
@@ -501,8 +513,27 @@ function attachSpotFormEvents(isEdit) {
       statusEl.textContent = '✅ 좌표 추출 완료 — 장소 이름을 직접 입력해주세요';
       statusEl.className = 'coord-status found';
     } else {
-      statusEl.textContent = '⚠️ 모바일 공유 URL은 좌표가 없습니다 — 장소명 입력 시 자동 검색됩니다';
-      statusEl.className = 'coord-status warn';
+      // URL에 좌표 없음 → Worker로 placeId 조회
+      const btn = this;
+      btn.textContent = '조회 중...'; btn.disabled = true;
+      statusEl.textContent = '🔍 좌표 조회 중...';
+      statusEl.className = 'coord-status searching';
+      try {
+        const coords = await fetchPlaceCoordById(parsed.placeId);
+        if (coords) {
+          document.getElementById('f_lat').value = coords.lat;
+          document.getElementById('f_lng').value = coords.lng;
+          statusEl.textContent = '✅ 좌표 추출 완료 — 장소 이름을 직접 입력해주세요';
+          statusEl.className = 'coord-status found';
+        } else {
+          statusEl.textContent = '⚠️ 좌표 조회 실패 — 장소명 입력 시 자동 검색됩니다';
+          statusEl.className = 'coord-status warn';
+        }
+      } catch (_) {
+        statusEl.textContent = '⚠️ 좌표 조회 실패 — 장소명 입력 시 자동 검색됩니다';
+        statusEl.className = 'coord-status warn';
+      }
+      btn.textContent = '추출'; btn.disabled = false;
     }
   });
 

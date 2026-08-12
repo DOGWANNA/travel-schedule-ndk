@@ -118,3 +118,4 @@ const SPOT_TYPE_ICON = {
 
 const ROUTE_WORKER_URL = "https://naver-route-proxy.9401ndk.workers.dev";
 const PLACE_IMAGE_WORKER_URL = "https://place-image-proxy.9401ndk.workers.dev";
+const PLACE_COORD_WORKER_URL = "https://place-coord-proxy.9401ndk.workers.dev";
