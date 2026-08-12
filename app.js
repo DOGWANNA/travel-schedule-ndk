@@ -1,6 +1,8 @@
 let activeDay = Object.keys(scheduleData)[0];
 let selectedIndex = null;
 let selectedSpotIndex = null;
+let spotPage = 0;
+const SPOTS_PER_PAGE = 10;
 
 const dayTabsEl = document.getElementById("dayTabs");
 const scheduleListEl = document.getElementById("scheduleList");
@@ -83,6 +85,7 @@ function renderDayTabs() {
       activeDay = dayKey;
       selectedIndex = null;
       selectedSpotIndex = null;
+      spotPage = 0;
       renderDayTabs();
       renderScheduleList();
       renderMapPanel();
@@ -151,14 +154,19 @@ function renderScheduleList() {
     const section = document.createElement("div");
     section.className = "spots-section";
 
+    const totalPages = Math.ceil(spots.length / SPOTS_PER_PAGE);
+    const pageStart = spotPage * SPOTS_PER_PAGE;
+    const pageSpots = spots.slice(pageStart, pageStart + SPOTS_PER_PAGE);
+
     const header = document.createElement("div");
     header.className = "spots-header";
-    header.textContent = "📍 가볼만한 곳";
+    header.textContent = "📍 가볼만한 곳 (" + spots.length + "곳)";
     section.appendChild(header);
 
-    spots.forEach((spot, idx) => {
+    pageSpots.forEach((spot, localIdx) => {
+      const globalIdx = pageStart + localIdx;
       const spotCard = document.createElement("div");
-      spotCard.className = "spot-card" + (selectedSpotIndex === idx ? " selected" : "");
+      spotCard.className = "spot-card" + (selectedSpotIndex === globalIdx ? " selected" : "");
 
       spotCard.innerHTML = `
         <div class="spot-thumb-wrap">
@@ -175,7 +183,7 @@ function renderScheduleList() {
       loadSpotImage(spotCard, spot.naverUrl);
 
       spotCard.addEventListener("click", () => {
-        selectedSpotIndex = (selectedSpotIndex === idx) ? null : idx;
+        selectedSpotIndex = (selectedSpotIndex === globalIdx) ? null : globalIdx;
         selectedIndex = null;
         renderScheduleList();
         renderSpotOnMap(selectedSpotIndex !== null ? spot : null);
@@ -185,6 +193,42 @@ function renderScheduleList() {
 
       section.appendChild(spotCard);
     });
+
+    if (totalPages > 1) {
+      const paginationEl = document.createElement("div");
+      paginationEl.className = "spots-pagination";
+
+      const prevBtn = document.createElement("button");
+      prevBtn.className = "spots-page-btn";
+      prevBtn.textContent = "‹ 이전";
+      prevBtn.disabled = spotPage === 0;
+      prevBtn.addEventListener("click", () => {
+        spotPage--;
+        selectedSpotIndex = null;
+        renderScheduleList();
+        renderMapPanel();
+      });
+
+      const pageInfo = document.createElement("span");
+      pageInfo.className = "spots-page-info";
+      pageInfo.textContent = (spotPage + 1) + " / " + totalPages;
+
+      const nextBtn = document.createElement("button");
+      nextBtn.className = "spots-page-btn";
+      nextBtn.textContent = "다음 ›";
+      nextBtn.disabled = spotPage >= totalPages - 1;
+      nextBtn.addEventListener("click", () => {
+        spotPage++;
+        selectedSpotIndex = null;
+        renderScheduleList();
+        renderMapPanel();
+      });
+
+      paginationEl.appendChild(prevBtn);
+      paginationEl.appendChild(pageInfo);
+      paginationEl.appendChild(nextBtn);
+      section.appendChild(paginationEl);
+    }
 
     scheduleListEl.appendChild(section);
   }
