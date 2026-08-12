@@ -164,6 +164,22 @@ const scheduleData = {
         naverUrl: "https://map.naver.com/p/entry/place/38010379",
         lat: 34.7402221,
         lng: 127.7356832
+      },
+      {
+        name: "덕일감자국",
+        type: "restaurant",
+        memo: "친구 추천 맛집! 숙소에서 넘어올 때 먹어도 좋아보영",
+        naverUrl: "https://map.naver.com/p/entry/place/32219663",
+        lat: 34.7645010,
+        lng: 127.6376380
+      },
+      {
+        name: "윤심이네실비집",
+        type: "restaurant",
+        memo: "갓김치들어간 김치찌개",
+        naverUrl: "https://map.naver.com/p/entry/place/2001621465",
+        lat: 34.7337688,
+        lng: 127.7213060
       }
     ]
   }
