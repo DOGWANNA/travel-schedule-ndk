@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>일정 관리</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <span class="eyebrow">TRAVEL SCHEDULE</span>
+      <h1>일정 관리</h1>
+    </div>
+    <a href="index.html" class="info-btn">← 일정 보기</a>
+  </div>
+  <nav id="breadcrumb" class="breadcrumb"></nav>
+</header>
+
+<div class="admin-layout">
+  <div class="admin-panel" id="adminContent">
+    <p class="empty-hint" style="margin-top:16px;">불러오는 중...</p>
+  </div>
+</div>
+
+<!-- 폼 모달 -->
+<div class="modal-overlay" id="formModal" hidden>
+  <div class="modal-card admin-modal-card">
+    <h3 id="formTitle"></h3>
+    <div id="formBody"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" id="formCancel">취소</button>
+      <button type="button" class="btn-save" id="formSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal-overlay" id="deleteModal" hidden>
+  <div class="modal-card">
+    <h3>삭제 확인</h3>
+    <p id="deleteMessage"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" id="deleteCancel">취소</button>
+      <button type="button" class="btn-delete" id="deleteConfirm">삭제</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
