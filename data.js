@@ -4,7 +4,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 async function fetchTrips() {
   const res = await fetch(
-    SUPABASE_URL + '/rest/v1/trips?select=id,title,days(id)&order=created_at',
+    SUPABASE_URL + '/rest/v1/trips?select=id,title,start_date,end_date,days(id)&order=start_date.desc.nullslast,created_at.desc',
     {
       headers: {
         'apikey': SUPABASE_ANON_KEY,

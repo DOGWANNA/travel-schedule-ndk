@@ -49,6 +49,16 @@
     return;
   }
 
+  function formatDate(d) {
+    return d ? d.replace(/-/g, '.') : '';
+  }
+  function formatDateRange(start, end) {
+    if (start && end) return formatDate(start) + ' ~ ' + formatDate(end);
+    if (start) return formatDate(start) + ' ~';
+    if (end) return '~ ' + formatDate(end);
+    return '';
+  }
+
   trips.forEach(function (trip) {
     const a = document.createElement('a');
     a.className = 'trip-card';
@@ -64,7 +74,8 @@
     const meta = document.createElement('div');
     meta.className = 'trip-card-meta';
     const dayCount = trip.days ? trip.days.length : 0;
-    meta.textContent = dayCount + '일 일정';
+    const dateRange = formatDateRange(trip.start_date, trip.end_date);
+    meta.textContent = (dateRange ? dateRange + '  ·  ' : '') + dayCount + '일 일정';
 
     const arrow = document.createElement('span');
     arrow.className = 'trip-card-arrow';

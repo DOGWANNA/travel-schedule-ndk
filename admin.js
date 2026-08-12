@@ -156,7 +156,10 @@ async function showTripsView() {
   } else {
     html += '<div class="admin-list">';
     trips.forEach(function(trip) {
-      html += '<div class="admin-list-item clickable" data-action="go" data-id="' + trip.id + '"><div class="item-main"><div class="item-title">' + esc(trip.title) + '</div></div><div class="item-actions"><button class="btn-edit" data-action="edit" data-id="' + trip.id + '">수정</button><button class="btn-delete-sm" data-action="del" data-id="' + trip.id + '">삭제</button></div></div>';
+      const dateRange = (trip.start_date && trip.end_date)
+        ? trip.start_date.replace(/-/g, '.') + ' ~ ' + trip.end_date.replace(/-/g, '.')
+        : (trip.start_date ? trip.start_date.replace(/-/g, '.') + ' ~' : '');
+      html += '<div class="admin-list-item clickable" data-action="go" data-id="' + trip.id + '"><div class="item-main"><div class="item-title">' + esc(trip.title) + '</div>' + (dateRange ? '<div class="item-sub">' + esc(dateRange) + '</div>' : '') + '</div><div class="item-actions"><button class="btn-edit" data-action="edit" data-id="' + trip.id + '">수정</button><button class="btn-delete-sm" data-action="del" data-id="' + trip.id + '">삭제</button></div></div>';
     });
     html += '</div>';
   }
@@ -176,12 +179,16 @@ async function showTripsView() {
 
 function openTripModal(trip) {
   openFormModal(trip ? '여행 수정' : '새 여행 추가',
-    '<div class="form-field"><label>여행 제목</label><input type="text" id="f_title" value="' + esc(trip ? trip.title : '') + '" placeholder="예: 여수 여행"></div>',
+    '<div class="form-field"><label>여행 제목</label><input type="text" id="f_title" value="' + esc(trip ? trip.title : '') + '" placeholder="예: 여수 여행"></div>' +
+    '<div class="form-field"><label>시작일</label><input type="date" id="f_start_date" value="' + esc(trip ? (trip.start_date || '') : '') + '"></div>' +
+    '<div class="form-field"><label>종료일</label><input type="date" id="f_end_date" value="' + esc(trip ? (trip.end_date || '') : '') + '"></div>',
     async function() {
       const title = val('f_title');
       if (!title) throw new Error('여행 제목을 입력해주세요');
-      if (trip) await apiPatch('trips', trip.id, { title });
-      else await apiPost('trips', { title });
+      const start_date = val('f_start_date') || null;
+      const end_date = val('f_end_date') || null;
+      if (trip) await apiPatch('trips', trip.id, { title, start_date, end_date });
+      else await apiPost('trips', { title, start_date, end_date });
       showTripsView();
     }
   );
