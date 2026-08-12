@@ -116,17 +116,36 @@ const SPOT_TYPE_ICON = {
   default:       "📍"
 };
 
-// Naver 방향 URL의 mapCoord(Web Mercator 정수 쌍 "x,y") → WGS84 {lat, lng}
+// Naver mapCoord → WGS84 {lat, lng}
+// Web Mercator 정수형(14000000,4500000) 또는 WGS84 소수형(37.28,127.05 / 127.05,37.28) 모두 처리
 function mapCoordToLatLng(mapCoord) {
   if (!mapCoord) return null;
   const parts = mapCoord.split(',').map(parseFloat);
   if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
-  const x = parts[0], y = parts[1];
-  if (x < 1000 || y < 1000) return null; // zoom 값이면 무시
-  const R = 6378137;
-  const lng = x / R * (180 / Math.PI);
-  const lat = (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * (180 / Math.PI);
-  return { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
+  const a = parts[0], b = parts[1];
+  if (a > 1000 && b > 1000) {
+    // Web Mercator (c= 파라미터 형식)
+    const R = 6378137;
+    const lng = a / R * (180 / Math.PI);
+    const lat = (2 * Math.atan(Math.exp(b / R)) - Math.PI / 2) * (180 / Math.PI);
+    return { lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6 };
+  }
+  if (a >= 33 && a <= 39 && b >= 124 && b <= 132) return { lat: a, lng: b }; // (lat, lng)
+  if (b >= 33 && b <= 39 && a >= 124 && a <= 132) return { lat: b, lng: a }; // (lng, lat)
+  return null;
+}
+
+async function fetchPlaceCoordById(placeId) {
+  if (!placeId) return null;
+  try {
+    const res = await fetch(PLACE_COORD_WORKER_URL + '?id=' + placeId);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.lat && data.lng) return data;
+    return null;
+  } catch (_) {
+    return null;
+  }
 }
 
 const ROUTE_WORKER_URL = "https://naver-route-proxy.9401ndk.workers.dev";

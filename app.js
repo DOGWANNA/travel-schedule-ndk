@@ -111,6 +111,8 @@ function renderScheduleList() {
   items.forEach((item, idx) => {
     const card = document.createElement("div");
     card.className = "schedule-card" + (selectedIndex === idx ? " selected" : "");
+    const isCar = TRANSPORT_SCHEME[item.transport] === "car";
+    const durationText = item.duration || (isCar ? "계산 중..." : null);
 
     card.innerHTML = `
       <div class="schedule-route">
@@ -121,11 +123,11 @@ function renderScheduleList() {
       </div>
       <div class="schedule-meta">
         <span class="chip">${TRANSPORT_ICON[item.transport] || "🚶"} ${item.transport}</span>
-        ${item.duration ? `<span class="chip duration-chip">⏱ ${item.duration}</span>` : ''}
+        ${durationText ? `<span class="chip duration-chip">⏱ ${durationText}</span>` : ''}
       </div>
       <div class="schedule-detail">
         <div class="row"><div class="k">이동 수단</div><div class="v">${item.transport}</div></div>
-        ${item.duration ? `<div class="row"><div class="k">이동 시간</div><div class="v duration-value">${item.duration}</div></div>` : ''}
+        ${durationText ? `<div class="row"><div class="k">이동 시간</div><div class="v duration-value">${durationText}</div></div>` : ''}
         ${item.memo ? `<div class="memo-box"><div class="memo-label">일정 내용</div><div class="memo-text">${item.memo}</div></div>` : ''}
         ${linkButtonsHtml(item)}
       </div>
@@ -249,10 +251,13 @@ function renderMapPanel() {
 
   const item = scheduleData[activeDay].items[selectedIndex];
 
+  const isCarItem = TRANSPORT_SCHEME[item.transport] === "car";
+  const mapDurationText = item.duration || (isCarItem ? "계산 중..." : null);
+
   mapSelectedInfoEl.innerHTML = `
     <div class="map-selected-info">
       <div class="route-line">${item.from} <span class="arrow">&#8594;</span> ${item.to}</div>
-      <div>${item.transport}${item.duration ? ' · <span class="duration-value">' + item.duration + '</span>' : ''}</div>
+      <div>${item.transport}${mapDurationText ? ' · <span class="duration-value">' + mapDurationText + '</span>' : ''}</div>
       ${linkButtonsHtml(item)}
     </div>
   `;
@@ -328,9 +333,11 @@ function updateDurationDisplay(durationMs) {
 async function showMapPins(item) {
   if (!naverMap) return;
 
-  // lat/lng 없으면 mapCoord(Web Mercator)에서 변환
+  // 1차: lat/lng 직접 사용
   let fromLat = item.fromLat, fromLng = item.fromLng;
   let toLat = item.toLat, toLng = item.toLng;
+
+  // 2차: mapCoord(Web Mercator 또는 WGS84 소수) → 변환
   if (!fromLat && item.fromMapCoord) {
     const c = mapCoordToLatLng(item.fromMapCoord);
     if (c) { fromLat = c.lat; fromLng = c.lng; }
@@ -338,6 +345,20 @@ async function showMapPins(item) {
   if (!toLat && item.toMapCoord) {
     const c = mapCoordToLatLng(item.toMapCoord);
     if (c) { toLat = c.lat; toLng = c.lng; }
+  }
+
+  // 3차: placeId Worker API 조회
+  const needsFrom = !fromLat && item.fromPlaceId;
+  const needsTo = !toLat && item.toPlaceId;
+  if (needsFrom || needsTo) {
+    try {
+      const [fromCoords, toCoords] = await Promise.all([
+        needsFrom ? fetchPlaceCoordById(item.fromPlaceId) : null,
+        needsTo ? fetchPlaceCoordById(item.toPlaceId) : null
+      ]);
+      if (fromCoords) { fromLat = fromCoords.lat; fromLng = fromCoords.lng; }
+      if (toCoords) { toLat = toCoords.lat; toLng = toCoords.lng; }
+    } catch (_) {}
   }
 
   if (!fromLat || !toLat) return;

@@ -54,18 +54,6 @@ async function searchCoords(name) {
   return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
 }
 
-async function fetchPlaceCoordById(placeId) {
-  try {
-    const res = await fetch(PLACE_COORD_WORKER_URL + '?id=' + placeId);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.lat && data.lng) return data;
-    return null;
-  } catch (_) {
-    return null;
-  }
-}
-
 function naverCToWgs84(x, y) {
   const R = 6378137;
   const lng = x / R * (180 / Math.PI);
@@ -88,7 +76,7 @@ function guessSpotType(name) {
 }
 
 function parseNaverDirectionsUrl(url) {
-  const m = url.match(/\/directions\/([A-Za-z0-9]+,[A-Za-z0-9]+),([^,]+),(\d+),PLACE_POI\/([A-Za-z0-9]+,[A-Za-z0-9]+),([^,]+),(\d+),PLACE_POI\/-\/([a-z]+)/);
+  const m = url.match(/\/directions\/([A-Za-z0-9.]+,[A-Za-z0-9.]+),([^,]+),(\d+),PLACE_POI\/([A-Za-z0-9.]+,[A-Za-z0-9.]+),([^,]+),(\d+),PLACE_POI\/-\/([a-z]+)/);
   if (!m) return null;
   const modeMap = { car: '자동차', transit: '대중교통', bus: '대중교통', walk: '도보', bicycle: '자전거' };
   return {
@@ -413,12 +401,25 @@ function attachItemFormEvents() {
     document.getElementById('f_transport').value = parsed.mode;
     document.getElementById('f_transport_display').value = parsed.mode;
 
+    // mapCoord → WGS84 즉시 변환 (빠름)
+    const fromMapC = mapCoordToLatLng(parsed.from.mapCoord);
+    const toMapC = mapCoordToLatLng(parsed.to.mapCoord);
+    if (fromMapC) {
+      document.getElementById('f_from_lat').value = fromMapC.lat;
+      document.getElementById('f_from_lng').value = fromMapC.lng;
+    }
+    if (toMapC) {
+      document.getElementById('f_to_lat').value = toMapC.lat;
+      document.getElementById('f_to_lng').value = toMapC.lng;
+    }
+
+    // placeId API로 더 정확한 좌표 조회
     const btn = this;
     btn.textContent = '추출 중...'; btn.disabled = true;
     try {
       const [fromCoords, toCoords] = await Promise.all([
-        searchCoords(parsed.from.name),
-        searchCoords(parsed.to.name)
+        parsed.from.placeId ? fetchPlaceCoordById(parsed.from.placeId) : null,
+        parsed.to.placeId ? fetchPlaceCoordById(parsed.to.placeId) : null
       ]);
       if (fromCoords) {
         document.getElementById('f_from_lat').value = fromCoords.lat;
