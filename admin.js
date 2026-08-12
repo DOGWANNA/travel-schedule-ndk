@@ -526,8 +526,10 @@ function attachSpotFormEvents(isEdit) {
           if (!isEdit && info.type) {
             document.getElementById('f_type').value = info.type;
           }
-          const nameHint = info.name ? ' (' + info.name + ')' : '';
-          statusEl.textContent = '✅ 좌표 추출 완료' + nameHint + ' — 장소 이름을 직접 입력해주세요';
+          if (info.name && !val('f_name')) {
+            document.getElementById('f_name').value = info.name;
+          }
+          statusEl.textContent = '✅ 좌표·장소명 추출 완료 — 내용을 확인 후 저장하세요';
           statusEl.className = 'coord-status found';
         } else {
           statusEl.textContent = '⚠️ 좌표 조회 실패 — 장소명 입력 시 자동 검색됩니다';
