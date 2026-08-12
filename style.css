@@ -506,6 +506,17 @@ header h1 {
   font-weight: 700;
   flex-shrink: 0;
 }
+.trip-card-duration {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  border: 1px solid rgba(226, 112, 63, 0.2);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
 .trips-empty {
   color: var(--text-sub);
   font-size: 14px;

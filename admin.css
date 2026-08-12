@@ -186,6 +186,35 @@
   margin: 12px 0 10px;
 }
 
+/* 자동 입력 안내 */
+.url-guide {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin: -2px 0 10px;
+  line-height: 1.5;
+}
+
+/* 자동 추출된 필드 (disabled) */
+.form-field input:disabled {
+  background: var(--accent-soft);
+  color: var(--text-sub);
+  cursor: not-allowed;
+  border-color: rgba(226, 112, 63, 0.18);
+}
+
+/* 여행 카드 기간 배지 */
+.trip-card-duration {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  border: 1px solid rgba(226, 112, 63, 0.2);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
 /* URL 파싱 영역 */
 .url-parse-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .url-parse-row input {

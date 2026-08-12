@@ -55,11 +55,23 @@ async function searchCoords(name) {
 }
 
 function parseNaverDirectionsUrl(url) {
-  const m = url.match(/\/directions\/([A-Za-z0-9]+,[A-Za-z0-9]+),([^,]+),(\d+),PLACE_POI\/([A-Za-z0-9]+,[A-Za-z0-9]+),([^,]+),(\d+),PLACE_POI/);
+  const m = url.match(/\/directions\/([A-Za-z0-9]+,[A-Za-z0-9]+),([^,]+),(\d+),PLACE_POI\/([A-Za-z0-9]+,[A-Za-z0-9]+),([^,]+),(\d+),PLACE_POI\/-\/([a-z]+)/);
   if (!m) return null;
+  const modeMap = { car: '자동차', transit: '대중교통', bus: '대중교통', walk: '도보', bicycle: '자전거' };
   return {
     from: { mapCoord: m[1], name: decodeURIComponent(m[2]), placeId: m[3] },
-    to:   { mapCoord: m[4], name: decodeURIComponent(m[5]), placeId: m[6] }
+    to:   { mapCoord: m[4], name: decodeURIComponent(m[5]), placeId: m[6] },
+    mode: modeMap[m[7]] || '자동차'
+  };
+}
+
+function parseNaverPlaceUrl(url) {
+  const idMatch = url.match(/\/place\/(\d+)/);
+  if (!idMatch) return null;
+  const nameMatch = url.match(/\/place\/\d+\/([^/?#]+)/);
+  return {
+    placeId: idMatch[1],
+    name: nameMatch ? decodeURIComponent(nameMatch[1]) : null
   };
 }
 
@@ -321,73 +333,77 @@ async function showDayView(day) {
 
 function itemFormHtml(item) {
   const v = item || {};
-  const transOpts = ['자동차','버스','도보','대중교통'].map(function(t) {
-    return '<option value="' + t + '"' + (v.transport === t ? ' selected' : '') + '>' + t + '</option>';
-  }).join('');
   return (
-    '<div class="url-parse-label">네이버 지도 길찾기 URL <span style="font-weight:400;color:var(--text-sub)">(선택 — mapCoord 자동 추출)</span></div>' +
+    '<div class="form-field"><label>일정 내용</label><textarea id="f_memo" placeholder="예: 숙소에서 여수 시내로 이동!">' + esc(v.memo || '') + '</textarea></div>' +
+    '<div class="form-section">네이버 지도 길찾기 URL</div>' +
+    '<p class="url-guide">URL을 붙여넣고 추출 버튼을 누르면 출발지·도착지·이동수단이 자동으로 입력됩니다.</p>' +
     '<div class="url-parse-row"><input type="text" id="f_naver_url" placeholder="https://map.naver.com/p/directions/..."><button type="button" class="btn-coord" id="parseUrlBtn">추출</button></div>' +
-    '<div class="form-section">출발지</div>' +
-    '<div class="form-field"><label>이름</label><div class="field-row"><input type="text" id="f_from_name" value="' + esc(v.from_name) + '" placeholder="예: 나탄스테이"><button type="button" class="btn-coord" data-target="from">좌표 검색</button></div></div>' +
-    '<div class="form-field"><label>위도</label><input type="number" id="f_from_lat" value="' + (v.from_lat || '') + '" step="any" placeholder="34.xxxx"></div>' +
-    '<div class="form-field"><label>경도</label><input type="number" id="f_from_lng" value="' + (v.from_lng || '') + '" step="any" placeholder="127.xxxx"></div>' +
-    '<div class="form-field"><label>MapCoord <span style="font-weight:400;color:var(--text-sub)">(선택)</span></label><input type="text" id="f_from_map_coord" value="' + esc(v.from_map_coord) + '" placeholder="예: 3zJfuI,2yMzYx"></div>' +
-    '<div class="form-field"><label>PlaceId <span style="font-weight:400;color:var(--text-sub)">(선택)</span></label><input type="text" id="f_from_place_id" value="' + esc(v.from_place_id) + '" placeholder="예: 1574024669"></div>' +
-    '<div class="form-section">도착지</div>' +
-    '<div class="form-field"><label>이름</label><div class="field-row"><input type="text" id="f_to_name" value="' + esc(v.to_name) + '" placeholder="예: 이순신광장"><button type="button" class="btn-coord" data-target="to">좌표 검색</button></div></div>' +
-    '<div class="form-field"><label>위도</label><input type="number" id="f_to_lat" value="' + (v.to_lat || '') + '" step="any" placeholder="34.xxxx"></div>' +
-    '<div class="form-field"><label>경도</label><input type="number" id="f_to_lng" value="' + (v.to_lng || '') + '" step="any" placeholder="127.xxxx"></div>' +
-    '<div class="form-field"><label>MapCoord <span style="font-weight:400;color:var(--text-sub)">(선택)</span></label><input type="text" id="f_to_map_coord" value="' + esc(v.to_map_coord) + '" placeholder="예: 3zNt8t,2yRqRB"></div>' +
-    '<div class="form-field"><label>PlaceId <span style="font-weight:400;color:var(--text-sub)">(선택)</span></label><input type="text" id="f_to_place_id" value="' + esc(v.to_place_id) + '" placeholder="예: 17281819"></div>' +
-    '<div class="form-section">이동 정보</div>' +
-    '<div class="form-field"><label>이동 수단</label><select id="f_transport">' + transOpts + '</select></div>' +
-    '<div class="form-field"><label>예상 소요 시간</label><input type="text" id="f_duration" value="' + esc(v.duration) + '" placeholder="예: 약 1시간"></div>' +
-    '<div class="form-field"><label>일정 내용</label><textarea id="f_memo" placeholder="예: 숙소에서 여수 시내로 이동!">' + esc(v.memo) + '</textarea></div>'
+    '<div class="form-section">자동 추출 정보</div>' +
+    '<div class="form-field"><label>출발지</label><input type="text" id="f_from_name" value="' + esc(v.from_name || '') + '" disabled placeholder="추출 후 자동 입력"></div>' +
+    '<div class="form-field"><label>도착지</label><input type="text" id="f_to_name" value="' + esc(v.to_name || '') + '" disabled placeholder="추출 후 자동 입력"></div>' +
+    '<div class="form-field"><label>이동 수단</label><input type="text" id="f_transport_display" value="' + esc(v.transport || '') + '" disabled placeholder="추출 후 자동 입력"></div>' +
+    '<input type="hidden" id="f_transport" value="' + esc(v.transport || '자동차') + '">' +
+    '<input type="hidden" id="f_from_lat" value="' + (v.from_lat || '') + '">' +
+    '<input type="hidden" id="f_from_lng" value="' + (v.from_lng || '') + '">' +
+    '<input type="hidden" id="f_from_map_coord" value="' + esc(v.from_map_coord || '') + '">' +
+    '<input type="hidden" id="f_from_place_id" value="' + esc(v.from_place_id || '') + '">' +
+    '<input type="hidden" id="f_to_lat" value="' + (v.to_lat || '') + '">' +
+    '<input type="hidden" id="f_to_lng" value="' + (v.to_lng || '') + '">' +
+    '<input type="hidden" id="f_to_map_coord" value="' + esc(v.to_map_coord || '') + '">' +
+    '<input type="hidden" id="f_to_place_id" value="' + esc(v.to_place_id || '') + '">'
   );
 }
 
 function attachItemFormEvents() {
-  document.getElementById('parseUrlBtn').addEventListener('click', function() {
-    const parsed = parseNaverDirectionsUrl(val('f_naver_url'));
+  document.getElementById('parseUrlBtn').addEventListener('click', async function() {
+    const url = val('f_naver_url');
+    if (!url) { alert('URL을 먼저 입력해주세요.'); return; }
+    const parsed = parseNaverDirectionsUrl(url);
     if (!parsed) { alert('URL에서 정보를 추출하지 못했습니다.\n네이버 지도 길찾기 URL인지 확인해주세요.'); return; }
+
+    document.getElementById('f_from_name').value = parsed.from.name;
+    document.getElementById('f_to_name').value = parsed.to.name;
     document.getElementById('f_from_map_coord').value = parsed.from.mapCoord;
-    document.getElementById('f_from_place_id').value  = parsed.from.placeId;
-    document.getElementById('f_to_map_coord').value   = parsed.to.mapCoord;
-    document.getElementById('f_to_place_id').value    = parsed.to.placeId;
-    if (!val('f_from_name')) document.getElementById('f_from_name').value = parsed.from.name;
-    if (!val('f_to_name'))   document.getElementById('f_to_name').value   = parsed.to.name;
-  });
-  formBodyEl.querySelectorAll('.btn-coord[data-target]').forEach(function(btn) {
-    btn.addEventListener('click', async function() {
-      const target = btn.dataset.target;
-      const name = val('f_' + target + '_name');
-      if (!name) { alert('이름을 먼저 입력해주세요'); return; }
-      btn.textContent = '검색 중...'; btn.disabled = true;
-      try {
-        const coords = await searchCoords(name);
-        if (coords) {
-          document.getElementById('f_' + target + '_lat').value = coords.lat;
-          document.getElementById('f_' + target + '_lng').value = coords.lng;
-        } else { alert('좌표를 찾지 못했습니다. 직접 입력해주세요.'); }
-      } finally { btn.textContent = '좌표 검색'; btn.disabled = false; }
-    });
+    document.getElementById('f_from_place_id').value = parsed.from.placeId;
+    document.getElementById('f_to_map_coord').value = parsed.to.mapCoord;
+    document.getElementById('f_to_place_id').value = parsed.to.placeId;
+    document.getElementById('f_transport').value = parsed.mode;
+    document.getElementById('f_transport_display').value = parsed.mode;
+
+    const btn = this;
+    btn.textContent = '추출 중...'; btn.disabled = true;
+    try {
+      const [fromCoords, toCoords] = await Promise.all([
+        searchCoords(parsed.from.name),
+        searchCoords(parsed.to.name)
+      ]);
+      if (fromCoords) {
+        document.getElementById('f_from_lat').value = fromCoords.lat;
+        document.getElementById('f_from_lng').value = fromCoords.lng;
+      }
+      if (toCoords) {
+        document.getElementById('f_to_lat').value = toCoords.lat;
+        document.getElementById('f_to_lng').value = toCoords.lng;
+      }
+    } catch (_) {}
+    btn.textContent = '추출'; btn.disabled = false;
   });
 }
 
 function openItemModal(item, count) {
   openFormModal(item ? '이동 일정 수정' : '이동 일정 추가', itemFormHtml(item), async function() {
     const from_name = val('f_from_name');
-    const to_name   = val('f_to_name');
-    if (!from_name || !to_name) throw new Error('출발지와 도착지를 입력해주세요');
+    const to_name = val('f_to_name');
+    if (!from_name || !to_name) throw new Error('URL을 입력하고 추출 버튼을 눌러주세요.');
     const data = {
       day_id: currentDay.id,
       order_num: item ? item.order_num : count + 1,
       from_name, from_lat: fval('f_from_lat'), from_lng: fval('f_from_lng'),
       from_map_coord: val('f_from_map_coord') || null, from_place_id: val('f_from_place_id') || null,
-      to_name,   to_lat: fval('f_to_lat'),   to_lng: fval('f_to_lng'),
-      to_map_coord: val('f_to_map_coord') || null,   to_place_id: val('f_to_place_id') || null,
-      transport: document.getElementById('f_transport').value,
-      duration: val('f_duration') || null,
+      to_name, to_lat: fval('f_to_lat'), to_lng: fval('f_to_lng'),
+      to_map_coord: val('f_to_map_coord') || null, to_place_id: val('f_to_place_id') || null,
+      transport: document.getElementById('f_transport').value || '자동차',
+      duration: null,
       memo: val('f_memo') || null
     };
     if (item) await apiPatch('schedule_items', item.id, data);
@@ -413,25 +429,53 @@ function spotFormHtml(spot) {
     return '<option value="' + t + '"' + (v.type === t ? ' selected' : '') + '>' + typeMap[t] + '</option>';
   }).join('');
   return (
-    '<div class="form-field"><label>장소 이름</label><div class="field-row"><input type="text" id="f_name" value="' + esc(v.name) + '" placeholder="예: 꽃돌게장1번가"><button type="button" class="btn-coord" id="searchCoordBtn">좌표 검색</button></div></div>' +
+    '<div class="form-section">네이버 지도 장소 URL</div>' +
+    '<p class="url-guide">URL 입력 후 추출 버튼을 누르면 장소명·좌표가 자동 입력됩니다.</p>' +
+    '<div class="url-parse-row"><input type="text" id="f_naver_url" value="' + esc(v.naver_url || '') + '" placeholder="https://map.naver.com/p/entry/place/..."><button type="button" class="btn-coord" id="parseSpotUrlBtn">추출</button></div>' +
+    '<div class="form-field"><label>메모</label><textarea id="f_memo" placeholder="예: 유명한 게장집!">' + esc(v.memo || '') + '</textarea></div>' +
+    '<div class="form-section">자동 추출 정보</div>' +
+    '<div class="form-field"><label>장소 이름 <span style="font-weight:400;color:var(--text-sub)">(URL에 없으면 직접 입력 → 좌표 자동 검색)</span></label><input type="text" id="f_name" value="' + esc(v.name || '') + '" placeholder="추출 후 자동 입력 또는 직접 입력"></div>' +
     '<div class="form-field"><label>종류</label><select id="f_type">' + typeOpts + '</select></div>' +
-    '<div class="form-field"><label>메모</label><textarea id="f_memo" placeholder="예: 유명한 게장집!">' + esc(v.memo) + '</textarea></div>' +
-    '<div class="form-field"><label>네이버 지도 URL</label><input type="text" id="f_naver_url" value="' + esc(v.naver_url) + '" placeholder="https://map.naver.com/p/entry/place/..."></div>' +
-    '<div class="form-field"><label>위도</label><input type="number" id="f_lat" value="' + (v.lat || '') + '" step="any" placeholder="34.xxxx"></div>' +
-    '<div class="form-field"><label>경도</label><input type="number" id="f_lng" value="' + (v.lng || '') + '" step="any" placeholder="127.xxxx"></div>'
+    '<input type="hidden" id="f_lat" value="' + (v.lat || '') + '">' +
+    '<input type="hidden" id="f_lng" value="' + (v.lng || '') + '">'
   );
 }
 
 function attachSpotFormEvents() {
-  document.getElementById('searchCoordBtn').addEventListener('click', async function() {
-    const name = val('f_name');
-    if (!name) { alert('장소 이름을 먼저 입력해주세요'); return; }
-    this.textContent = '검색 중...'; this.disabled = true;
+  document.getElementById('parseSpotUrlBtn').addEventListener('click', async function() {
+    const url = val('f_naver_url');
+    if (!url) { alert('URL을 먼저 입력해주세요.'); return; }
+    const parsed = parseNaverPlaceUrl(url);
+    if (!parsed) { alert('네이버 지도 장소 URL인지 확인해주세요.\n예: https://map.naver.com/p/entry/place/...'); return; }
+
+    const btn = this;
+    btn.textContent = '추출 중...'; btn.disabled = true;
+    try {
+      if (parsed.name) {
+        document.getElementById('f_name').value = parsed.name;
+        const coords = await searchCoords(parsed.name);
+        if (coords) {
+          document.getElementById('f_lat').value = coords.lat;
+          document.getElementById('f_lng').value = coords.lng;
+        }
+      } else {
+        alert('URL에 장소명이 없습니다.\n아래 장소 이름 칸에 직접 입력하면 좌표가 자동 검색됩니다.');
+        document.getElementById('f_name').focus();
+      }
+    } catch (_) {}
+    btn.textContent = '추출'; btn.disabled = false;
+  });
+
+  document.getElementById('f_name').addEventListener('blur', async function() {
+    const name = this.value.trim();
+    if (!name || document.getElementById('f_lat').value) return;
     try {
       const coords = await searchCoords(name);
-      if (coords) { document.getElementById('f_lat').value = coords.lat; document.getElementById('f_lng').value = coords.lng; }
-      else { alert('좌표를 찾지 못했습니다. 직접 입력해주세요.'); }
-    } finally { this.textContent = '좌표 검색'; this.disabled = false; }
+      if (coords) {
+        document.getElementById('f_lat').value = coords.lat;
+        document.getElementById('f_lng').value = coords.lng;
+      }
+    } catch (_) {}
   });
 }
 
@@ -452,7 +496,7 @@ function openSpotModal(spot, count) {
     showDayView(currentDay);
   });
   attachSpotFormEvents();
-  document.getElementById('f_name').focus();
+  document.getElementById('f_naver_url').focus();
 }
 
 function confirmDeleteSpot(spot) {

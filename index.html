@@ -58,6 +58,12 @@
     if (end) return '~ ' + formatDate(end);
     return '';
   }
+  function calcDuration(start, end) {
+    if (!start || !end) return null;
+    const nights = Math.round((new Date(end) - new Date(start)) / 86400000);
+    if (nights === 0) return '당일치기';
+    return nights + '박 ' + (nights + 1) + '일';
+  }
 
   trips.forEach(function (trip) {
     const a = document.createElement('a');
@@ -71,18 +77,30 @@
     title.className = 'trip-card-title';
     title.textContent = trip.title;
 
-    const meta = document.createElement('div');
-    meta.className = 'trip-card-meta';
-    const dayCount = trip.days ? trip.days.length : 0;
     const dateRange = formatDateRange(trip.start_date, trip.end_date);
-    meta.textContent = (dateRange ? dateRange + '  ·  ' : '') + dayCount + '일 일정';
+    const duration = calcDuration(trip.start_date, trip.end_date);
+
+    if (dateRange) {
+      const dateEl = document.createElement('div');
+      dateEl.className = 'trip-card-meta';
+      dateEl.textContent = dateRange;
+      body.appendChild(title);
+      body.appendChild(dateEl);
+    } else {
+      body.appendChild(title);
+    }
+
+    if (duration) {
+      const durEl = document.createElement('div');
+      durEl.className = 'trip-card-duration';
+      durEl.textContent = duration;
+      body.appendChild(durEl);
+    }
 
     const arrow = document.createElement('span');
     arrow.className = 'trip-card-arrow';
     arrow.textContent = '→';
 
-    body.appendChild(title);
-    body.appendChild(meta);
     a.appendChild(body);
     a.appendChild(arrow);
     el.appendChild(a);

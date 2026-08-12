@@ -121,15 +121,12 @@ function renderScheduleList() {
       </div>
       <div class="schedule-meta">
         <span class="chip">${TRANSPORT_ICON[item.transport] || "🚶"} ${item.transport}</span>
-        <span class="chip duration-chip">⏱ ${item.duration}</span>
+        ${item.duration ? `<span class="chip duration-chip">⏱ ${item.duration}</span>` : ''}
       </div>
       <div class="schedule-detail">
         <div class="row"><div class="k">이동 수단</div><div class="v">${item.transport}</div></div>
-        <div class="row"><div class="k">이동 시간</div><div class="v duration-value">${item.duration}</div></div>
-        <div class="memo-box">
-          <div class="memo-label">일정 내용</div>
-          <div class="memo-text">${item.memo}</div>
-        </div>
+        ${item.duration ? `<div class="row"><div class="k">이동 시간</div><div class="v duration-value">${item.duration}</div></div>` : ''}
+        ${item.memo ? `<div class="memo-box"><div class="memo-label">일정 내용</div><div class="memo-text">${item.memo}</div></div>` : ''}
         ${linkButtonsHtml(item)}
       </div>
     `;
@@ -255,7 +252,7 @@ function renderMapPanel() {
   mapSelectedInfoEl.innerHTML = `
     <div class="map-selected-info">
       <div class="route-line">${item.from} <span class="arrow">&#8594;</span> ${item.to}</div>
-      <div>${item.transport} · <span class="duration-value">${item.duration}</span></div>
+      <div>${item.transport}${item.duration ? ' · <span class="duration-value">' + item.duration + '</span>' : ''}</div>
       ${linkButtonsHtml(item)}
     </div>
   `;
