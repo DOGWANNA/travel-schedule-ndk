@@ -205,7 +205,7 @@ async function showTripsView() {
   try { trips = await apiGet('trips?select=*&order=created_at'); }
   catch (e) { contentEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">불러오기 실패: ' + e.message + '</p>'; return; }
 
-  let html = '<div class="view-header"><h2>전체 여행 목록</h2><button class="btn-add" id="addTripBtn">+ 새 여행 추가</button></div>';
+  let html = '<div class="view-header"><button class="btn-add" id="addTripBtn">+ 새 여행 추가</button></div>';
   if (!trips.length) {
     html += '<div class="admin-empty">등록된 여행이 없습니다.</div>';
   } else {
