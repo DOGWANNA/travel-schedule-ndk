@@ -428,54 +428,45 @@ function spotFormHtml(spot) {
   const typeOpts = Object.keys(typeMap).map(function(t) {
     return '<option value="' + t + '"' + (v.type === t ? ' selected' : '') + '>' + typeMap[t] + '</option>';
   }).join('');
+  const hasCoords = !!(v.lat && v.lng);
   return (
-    '<div class="form-section">네이버 지도 장소 URL</div>' +
-    '<p class="url-guide">URL 입력 후 추출 버튼을 누르면 장소명·좌표가 자동 입력됩니다.</p>' +
-    '<div class="url-parse-row"><input type="text" id="f_naver_url" value="' + esc(v.naver_url || '') + '" placeholder="https://map.naver.com/p/entry/place/..."><button type="button" class="btn-coord" id="parseSpotUrlBtn">추출</button></div>' +
-    '<div class="form-field"><label>메모</label><textarea id="f_memo" placeholder="예: 유명한 게장집!">' + esc(v.memo || '') + '</textarea></div>' +
-    '<div class="form-section">자동 추출 정보</div>' +
-    '<div class="form-field"><label>장소 이름 <span style="font-weight:400;color:var(--text-sub)">(URL에 없으면 직접 입력 → 좌표 자동 검색)</span></label><input type="text" id="f_name" value="' + esc(v.name || '') + '" placeholder="추출 후 자동 입력 또는 직접 입력"></div>' +
+    '<div class="form-field"><label>장소 이름 <span class="label-hint">필수 · 입력 후 탭 누르면 좌표 자동 검색</span></label>' +
+    '<input type="text" id="f_name" value="' + esc(v.name || '') + '" placeholder="예: 꽃돌게장1번가" autocomplete="off"></div>' +
+    '<div class="coord-status" id="coordStatus">' + (hasCoords ? '📍 좌표 등록됨 (' + Number(v.lat).toFixed(4) + ', ' + Number(v.lng).toFixed(4) + ')' : '') + '</div>' +
     '<div class="form-field"><label>종류</label><select id="f_type">' + typeOpts + '</select></div>' +
+    '<div class="form-field"><label>네이버 지도 URL <span class="label-hint">이미지·지도 링크용 (선택)</span></label>' +
+    '<input type="text" id="f_naver_url" value="' + esc(v.naver_url || '') + '" placeholder="https://map.naver.com/p/entry/place/..."></div>' +
+    '<div class="form-field"><label>메모</label><textarea id="f_memo" placeholder="예: 유명한 게장집!">' + esc(v.memo || '') + '</textarea></div>' +
     '<input type="hidden" id="f_lat" value="' + (v.lat || '') + '">' +
     '<input type="hidden" id="f_lng" value="' + (v.lng || '') + '">'
   );
 }
 
 function attachSpotFormEvents() {
-  document.getElementById('parseSpotUrlBtn').addEventListener('click', async function() {
-    const url = val('f_naver_url');
-    if (!url) { alert('URL을 먼저 입력해주세요.'); return; }
-    const parsed = parseNaverPlaceUrl(url);
-    if (!parsed) { alert('네이버 지도 장소 URL인지 확인해주세요.\n예: https://map.naver.com/p/entry/place/...'); return; }
-
-    const btn = this;
-    btn.textContent = '추출 중...'; btn.disabled = true;
-    try {
-      if (parsed.name) {
-        document.getElementById('f_name').value = parsed.name;
-        const coords = await searchCoords(parsed.name);
-        if (coords) {
-          document.getElementById('f_lat').value = coords.lat;
-          document.getElementById('f_lng').value = coords.lng;
-        }
-      } else {
-        alert('URL에 장소명이 없습니다.\n아래 장소 이름 칸에 직접 입력하면 좌표가 자동 검색됩니다.');
-        document.getElementById('f_name').focus();
-      }
-    } catch (_) {}
-    btn.textContent = '추출'; btn.disabled = false;
-  });
+  const statusEl = document.getElementById('coordStatus');
 
   document.getElementById('f_name').addEventListener('blur', async function() {
     const name = this.value.trim();
-    if (!name || document.getElementById('f_lat').value) return;
+    if (!name) return;
+    statusEl.textContent = '🔍 좌표 검색 중...';
+    statusEl.className = 'coord-status searching';
+    document.getElementById('f_lat').value = '';
+    document.getElementById('f_lng').value = '';
     try {
       const coords = await searchCoords(name);
       if (coords) {
         document.getElementById('f_lat').value = coords.lat;
         document.getElementById('f_lng').value = coords.lng;
+        statusEl.textContent = '📍 좌표 등록됨 (' + coords.lat.toFixed(4) + ', ' + coords.lng.toFixed(4) + ')';
+        statusEl.className = 'coord-status found';
+      } else {
+        statusEl.textContent = '⚠️ 좌표를 찾지 못했습니다 (저장은 가능)';
+        statusEl.className = 'coord-status warn';
       }
-    } catch (_) {}
+    } catch (_) {
+      statusEl.textContent = '⚠️ 좌표 검색 실패';
+      statusEl.className = 'coord-status warn';
+    }
   });
 }
 
@@ -496,7 +487,7 @@ function openSpotModal(spot, count) {
     showDayView(currentDay);
   });
   attachSpotFormEvents();
-  document.getElementById('f_naver_url').focus();
+  document.getElementById('f_name').focus();
 }
 
 function confirmDeleteSpot(spot) {
