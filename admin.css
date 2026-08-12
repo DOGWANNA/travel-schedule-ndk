@@ -197,12 +197,18 @@
 .coord-status {
   font-size: 12px;
   color: var(--text-sub);
-  margin: -8px 0 14px;
-  min-height: 18px;
+  margin: -8px 0 10px;
+  min-height: 16px;
 }
-.coord-status.found  { color: #27ae60; }
-.coord-status.warn   { color: #e67e22; }
+.coord-status.found     { color: #27ae60; }
+.coord-status.warn      { color: #e67e22; }
 .coord-status.searching { color: var(--accent); }
+
+/* 위도/경도 나란히 */
+.coord-row {
+  display: flex;
+  gap: 10px;
+}
 
 /* 자동 입력 안내 */
 .url-guide {
