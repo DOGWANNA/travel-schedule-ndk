@@ -2,9 +2,24 @@
 const SUPABASE_URL = 'https://vzpujfdihrxuyvekgqgn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6cHVqZmRpaHJ4dXl2ZWtncWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0Njk0NDIsImV4cCI6MjEwMjA0NTQ0Mn0.AwfmBkcauCW-vCUSWylJnD_h3eLwZ_L0CshRFYDcA58';
 
-async function fetchScheduleData() {
+async function fetchTrips() {
   const res = await fetch(
-    SUPABASE_URL + '/rest/v1/trips?select=id,title,days(id,label,order_num,schedule_items(id,order_num,from_name,from_lat,from_lng,from_map_coord,from_place_id,to_name,to_lat,to_lng,to_map_coord,to_place_id,transport,duration,memo),spots(id,order_num,name,type,memo,naver_url,lat,lng))',
+    SUPABASE_URL + '/rest/v1/trips?select=id,title,days(id)&order=created_at',
+    {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+      }
+    }
+  );
+  if (!res.ok) throw new Error('Supabase fetch failed: ' + res.status);
+  return res.json();
+}
+
+async function fetchScheduleData(tripId) {
+  const filter = tripId ? 'id=eq.' + tripId + '&' : '';
+  const res = await fetch(
+    SUPABASE_URL + '/rest/v1/trips?' + filter + 'select=id,title,days(id,label,order_num,schedule_items(id,order_num,from_name,from_lat,from_lng,from_map_coord,from_place_id,to_name,to_lat,to_lng,to_map_coord,to_place_id,transport,duration,memo),spots(id,order_num,name,type,memo,naver_url,lat,lng))',
     {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -14,7 +29,7 @@ async function fetchScheduleData() {
   );
   if (!res.ok) throw new Error('Supabase fetch failed: ' + res.status);
   const trips = await res.json();
-  if (!trips.length) return { tripId: null, days: {} };
+  if (!trips.length) return { tripId: null, title: null, days: {} };
 
   const trip = trips[0];
   const sortedDays = trip.days.slice().sort(function(a, b) { return a.order_num - b.order_num; });
@@ -56,7 +71,7 @@ async function fetchScheduleData() {
     };
   });
 
-  return { tripId: trip.id, days: days };
+  return { tripId: trip.id, title: trip.title, days: days };
 }
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────

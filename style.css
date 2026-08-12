@@ -462,6 +462,57 @@ header h1 {
   text-align: center;
 }
 
+.trips-layout {
+  padding: 10px 24px 56px;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.trip-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 24px;
+  background: var(--panel-bg);
+  border: 1px solid rgba(241, 221, 201, 0.6);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color .18s, box-shadow .18s, transform .12s;
+}
+.trip-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+.trip-card-body { flex: 1; min-width: 0; }
+.trip-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 5px;
+}
+.trip-card-meta {
+  font-size: 13px;
+  color: var(--text-sub);
+  font-weight: 600;
+}
+.trip-card-arrow {
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.trips-empty {
+  color: var(--text-sub);
+  font-size: 14px;
+  text-align: center;
+  padding: 40px 0;
+}
+
 @media (min-width: 721px) {
   .schedule-panel { order: -1; flex-basis: 420px; }
   .map-panel { flex-basis: 340px; }

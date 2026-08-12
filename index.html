@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>나의 여행 일정</title>
+<title>나의 여행</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,56 +12,72 @@
   <div class="header-top">
     <div>
       <span class="eyebrow">TRAVEL SCHEDULE</span>
-      <h1>나의 여행 일정</h1>
+      <h1>나의 여행</h1>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <a href="admin.html" class="info-btn">⚙️ 관리</a>
-      <button type="button" class="info-btn" id="noteInfoBtn">ℹ️ 이용 안내</button>
-    </div>
+    <a href="admin.html" class="info-btn">⚙️ 관리</a>
   </div>
 </header>
 
-<div class="layout">
-  <div class="map-panel">
-    <h2>지도</h2>
-    <div id="naverMap"></div>
-    <div id="mapSelectedInfo">
-      <p class="empty-hint" style="margin-top:16px;">일정을 눌러 보세요.</p>
-    </div>
-  </div>
-
-  <div class="schedule-panel">
-    <div class="day-tabs" id="dayTabs"></div>
-    <div class="schedule-list" id="scheduleList"></div>
-  </div>
+<div class="trips-layout" id="tripsList">
+  <p class="empty-hint" style="margin-top:16px;">불러오는 중...</p>
 </div>
 
-<div class="modal-overlay" id="noteModalOverlay" hidden>
-  <div class="modal-card">
-    <h3>이용 안내</h3>
-    <p>
-      <strong>기본 사용법</strong><br>
-      일정 카드를 클릭하면 이동 수단·소요 시간·일정 내용이 펼쳐지고, 지도에 출발지·도착지 마커가 표시됩니다. 카드 안의 "네이버 지도에서 길찾기 열기" 버튼을 누르면 실제 길찾기 화면으로 바로 이동합니다.
-    </p>
-    <p>
-      <strong>지도에 표시되는 선</strong><br>
-      지도 위 선은 기본적으로 출발지·도착지를 이은 직선(점선)일 뿐, 실제 도로 경로가 아닙니다. 다만 "자동차" 일정은 서버(Cloudflare Worker + NCP Direction5 API)에서 실제 도로 경로를 가져와 실선으로 표시하고, 소요 시간도 실시간 값으로 자동 교체됩니다 ("(실시간)"으로 표시). 자동차 외 이동수단(버스·도보 등)은 NCP가 경로를 계산해주지 않기 때문에 직선과 미리 입력해둔 예상 시간이 그대로 표시됩니다.
-    </p>
-    <p>
-      <strong>"네이버 지도에서 길찾기 열기" 버튼</strong><br>
-      이 버튼은 네이버 지도에서 실제로 그 두 장소를 길찾기 해봤을 때 나온 URL을 그대로 가져와 쓴 것이라, 누르면 출발지·도착지가 이미 채워진 길찾기 화면으로 정확히 이동합니다.
-    </p>
-    <p>
-      <strong>새 일정 추가하기</strong><br>
-      새로운 일정을 추가할 때는 네이버 지도에서 그 두 장소로 길찾기를 한 번 직접 실행해본 뒤, 주소창에 뜨는 URL 속 좌표·장소ID 값을 복사해서 데이터에 넣어야 위 버튼이 정확하게 동작합니다.
-    </p>
-    <button type="button" class="modal-close-btn" id="noteModalClose">닫기</button>
-  </div>
-</div>
-
-<script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=mi7v1rjuhb&submodules=geocoder"></script>
 <script src="data.js"></script>
-<script src="app.js"></script>
+<script>
+(async function () {
+  const el = document.getElementById('tripsList');
+
+  let trips;
+  try {
+    trips = await fetchTrips();
+  } catch (e) {
+    el.textContent = '';
+    const msg = document.createElement('p');
+    msg.className = 'trips-empty';
+    msg.textContent = '데이터를 불러오지 못했습니다.';
+    el.appendChild(msg);
+    return;
+  }
+
+  el.textContent = '';
+
+  if (!trips.length) {
+    const msg = document.createElement('p');
+    msg.className = 'trips-empty';
+    msg.textContent = '등록된 여행이 없습니다. 관리 페이지에서 추가해주세요.';
+    el.appendChild(msg);
+    return;
+  }
+
+  trips.forEach(function (trip) {
+    const a = document.createElement('a');
+    a.className = 'trip-card';
+    a.href = 'schedule.html?trip=' + encodeURIComponent(trip.id);
+
+    const body = document.createElement('div');
+    body.className = 'trip-card-body';
+
+    const title = document.createElement('div');
+    title.className = 'trip-card-title';
+    title.textContent = trip.title;
+
+    const meta = document.createElement('div');
+    meta.className = 'trip-card-meta';
+    const dayCount = trip.days ? trip.days.length : 0;
+    meta.textContent = dayCount + '일 일정';
+
+    const arrow = document.createElement('span');
+    arrow.className = 'trip-card-arrow';
+    arrow.textContent = '→';
+
+    body.appendChild(title);
+    body.appendChild(meta);
+    a.appendChild(body);
+    a.appendChild(arrow);
+    el.appendChild(a);
+  });
+})();
+</script>
 
 </body>
 </html>

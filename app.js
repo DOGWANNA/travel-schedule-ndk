@@ -416,12 +416,22 @@ document.addEventListener("keydown", (e) => {
 initNaverMap();
 
 async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const tripId = params.get('trip');
+  if (!tripId) {
+    window.location.href = 'index.html';
+    return;
+  }
   scheduleListEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">일정을 불러오는 중...</p>';
   try {
-    const result = await fetchScheduleData();
+    const result = await fetchScheduleData(tripId);
     activeTripId = result.tripId;
     scheduleData = result.days;
     activeDay = Object.keys(scheduleData)[0] || null;
+    if (result.title) {
+      document.getElementById('tripTitle').textContent = result.title;
+      document.title = result.title;
+    }
   } catch (e) {
     scheduleListEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">데이터를 불러오지 못했습니다.</p>';
     return;
