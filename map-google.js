@@ -97,24 +97,47 @@ class GoogleMapAdapter extends MapAdapter {
   }
 
   async fetchRoute(from, to, mode) {
+    if (mode === 'transit') {
+      return this._fetchTransitRoute(from, to);
+    }
+    return this._fetchDrivingRoute(from, to, mode);
+  }
+
+  async _fetchTransitRoute(from, to) {
+    const { Route } = await google.maps.importLibrary('routes');
+    const { encoding } = await google.maps.importLibrary('geometry');
+
+    const response = await new Route().computeRoutes({
+      origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
+      destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
+      travelMode: 'TRANSIT',
+      computeAlternativeRoutes: false,
+      languageCode: 'ko-KR',
+      transitPreferences: { routingPreference: 'FEWER_TRANSFERS' }
+    });
+
+    if (!response.routes || !response.routes.length) throw new Error('No transit route found');
+
+    const r = response.routes[0];
+    const path = encoding.decodePath(r.polyline.encodedPolyline)
+      .map(p => ({ lat: p.lat(), lng: p.lng() }));
+    const durationMs = r.legs.reduce((sum, leg) => sum + parseInt(leg.duration), 0) * 1000;
+    return { path, durationMs };
+  }
+
+  _fetchDrivingRoute(from, to, mode) {
     const modeMap = {
       driving: google.maps.TravelMode.DRIVING,
-      transit: google.maps.TravelMode.TRANSIT,
       walking: google.maps.TravelMode.WALKING
     };
     const travelMode = modeMap[mode] || google.maps.TravelMode.DRIVING;
 
     return new Promise((resolve, reject) => {
-      const request = {
+      new google.maps.DirectionsService().route({
         origin: { lat: from.lat, lng: from.lng },
         destination: { lat: to.lat, lng: to.lng },
         travelMode
-      };
-      if (travelMode === google.maps.TravelMode.TRANSIT) {
-        request.transitOptions = { departureTime: new Date() };
-      }
-
-      new google.maps.DirectionsService().route(request, (result, status) => {
+      }, (result, status) => {
         if (status !== 'OK') { reject(new Error('Directions failed: ' + status)); return; }
         const route = result.routes[0];
         const path = [];
