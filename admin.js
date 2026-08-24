@@ -441,18 +441,65 @@ function attachItemFormEvents() {
   });
 }
 
+function itemFormHtmlInternational(item) {
+  const v = item || {};
+  return (
+    '<div class="form-field"><label>일정 내용</label><textarea id="f_memo" placeholder="예: 호텔에서 시부야로 이동!">' + esc(v.memo || '') + '</textarea></div>' +
+    '<div class="form-section">출발지 검색</div>' +
+    '<div class="url-parse-row"><input type="text" id="f_from_search" placeholder="출발지 이름 입력 (예: Shibuya Station)"></div>' +
+    '<div class="form-field"><label>출발지 이름</label><input type="text" id="f_from_name" value="' + esc(v.from_name || '') + '" placeholder="검색 후 자동 입력"></div>' +
+    '<div class="form-section">도착지 검색</div>' +
+    '<div class="url-parse-row"><input type="text" id="f_to_search" placeholder="도착지 이름 입력 (예: Tokyo Tower)"></div>' +
+    '<div class="form-field"><label>도착지 이름</label><input type="text" id="f_to_name" value="' + esc(v.to_name || '') + '" placeholder="검색 후 자동 입력"></div>' +
+    '<div class="form-field"><label>이동 수단</label>' +
+    '<select id="f_transport">' +
+    ['자동차', '도보', '대중교통', '버스'].map(function(t) {
+      return '<option value="' + t + '"' + (v.transport === t ? ' selected' : '') + '>' + (TRANSPORT_ICON[t] || '') + ' ' + t + '</option>';
+    }).join('') +
+    '</select></div>' +
+    '<input type="hidden" id="f_from_lat" value="' + (v.from_lat || '') + '">' +
+    '<input type="hidden" id="f_from_lng" value="' + (v.from_lng || '') + '">' +
+    '<input type="hidden" id="f_to_lat" value="' + (v.to_lat || '') + '">' +
+    '<input type="hidden" id="f_to_lng" value="' + (v.to_lng || '') + '">'
+  );
+}
+
+function attachItemFormEventsInternational() {
+  function bindAutocomplete(searchId, nameId, latId, lngId) {
+    const input = document.getElementById(searchId);
+    if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+    const ac = new google.maps.places.Autocomplete(input);
+    ac.addListener('place_changed', function() {
+      const place = ac.getPlace();
+      if (!place.geometry) return;
+      document.getElementById(nameId).value = place.name || '';
+      document.getElementById(latId).value = place.geometry.location.lat();
+      document.getElementById(lngId).value = place.geometry.location.lng();
+    });
+  }
+  bindAutocomplete('f_from_search', 'f_from_name', 'f_from_lat', 'f_from_lng');
+  bindAutocomplete('f_to_search', 'f_to_name', 'f_to_lat', 'f_to_lng');
+}
+
 function openItemModal(item, count) {
-  openFormModal(item ? '이동 일정 수정' : '이동 일정 추가', itemFormHtml(item), async function() {
+  const isInternational = currentTrip && currentTrip.trip_type === 'international';
+  const formHtml = isInternational ? itemFormHtmlInternational(item) : itemFormHtml(item);
+
+  openFormModal(item ? '이동 일정 수정' : '이동 일정 추가', formHtml, async function() {
     const from_name = val('f_from_name');
     const to_name = val('f_to_name');
-    if (!from_name || !to_name) throw new Error('URL을 입력하고 추출 버튼을 눌러주세요.');
+    if (!from_name || !to_name) throw new Error(
+      isInternational ? '출발지와 도착지를 검색해서 선택해주세요.' : 'URL을 입력하고 추출 버튼을 눌러주세요.'
+    );
     const data = {
       day_id: currentDay.id,
       order_num: item ? item.order_num : count + 1,
       from_name, from_lat: fval('f_from_lat'), from_lng: fval('f_from_lng'),
-      from_map_coord: val('f_from_map_coord') || null, from_place_id: val('f_from_place_id') || null,
+      from_map_coord: isInternational ? null : (val('f_from_map_coord') || null),
+      from_place_id: isInternational ? null : (val('f_from_place_id') || null),
       to_name, to_lat: fval('f_to_lat'), to_lng: fval('f_to_lng'),
-      to_map_coord: val('f_to_map_coord') || null, to_place_id: val('f_to_place_id') || null,
+      to_map_coord: isInternational ? null : (val('f_to_map_coord') || null),
+      to_place_id: isInternational ? null : (val('f_to_place_id') || null),
       transport: document.getElementById('f_transport').value || '자동차',
       duration: null,
       memo: val('f_memo') || null
@@ -461,7 +508,12 @@ function openItemModal(item, count) {
     else await apiPost('schedule_items', data);
     showDayView(currentDay);
   });
-  attachItemFormEvents();
+
+  if (isInternational) {
+    attachItemFormEventsInternational();
+  } else {
+    attachItemFormEvents();
+  }
 }
 
 function confirmDeleteItem(item) {
