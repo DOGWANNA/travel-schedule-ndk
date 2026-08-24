@@ -391,7 +391,7 @@ async function showMapPins(item) {
       mapAdapter.drawPolyline(path, { strokeColor: '#e2703f', strokeWeight: 4, strokeStyle: 'solid' });
       if (durationMs) updateDurationDisplay(durationMs);
       return;
-    } catch (_) {}
+    } catch (e) { console.warn('[route]', routeMode, e.message); }
   }
 
   if (mySeq !== mapRequestSeq) return;

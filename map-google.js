@@ -89,11 +89,15 @@ class GoogleMapAdapter extends MapAdapter {
     };
     const travelMode = modeMap[mode] || google.maps.TravelMode.DRIVING;
     return new Promise((resolve, reject) => {
-      new google.maps.DirectionsService().route({
+      const request = {
         origin: { lat: from.lat, lng: from.lng },
         destination: { lat: to.lat, lng: to.lng },
         travelMode
-      }, (result, status) => {
+      };
+      if (travelMode === google.maps.TravelMode.TRANSIT) {
+        request.transitOptions = { departureTime: new Date() };
+      }
+      new google.maps.DirectionsService().route(request, (result, status) => {
         if (status !== 'OK') { reject(new Error('Directions failed: ' + status)); return; }
         const route = result.routes[0];
         const path = route.overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
