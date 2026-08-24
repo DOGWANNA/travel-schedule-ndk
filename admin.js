@@ -221,8 +221,14 @@ async function showTripsView() {
 }
 
 function openTripModal(trip) {
+  const isDomestic = !trip || !trip.trip_type || trip.trip_type === 'domestic';
   openFormModal(trip ? '여행 수정' : '새 여행 추가',
     '<div class="form-field"><label>여행 제목</label><input type="text" id="f_title" value="' + esc(trip ? trip.title : '') + '" placeholder="예: 여수 여행"></div>' +
+    '<div class="form-field"><label>여행 타입</label>' +
+    '<div style="display:flex;gap:16px;margin-top:4px;">' +
+    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="f_trip_type" value="domestic"' + (isDomestic ? ' checked' : '') + '> 🇰🇷 국내</label>' +
+    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="f_trip_type" value="international"' + (!isDomestic ? ' checked' : '') + '> 🌍 해외</label>' +
+    '</div></div>' +
     '<div class="form-field"><label>시작일</label><input type="date" id="f_start_date" value="' + esc(trip ? (trip.start_date || '') : '') + '"></div>' +
     '<div class="form-field"><label>종료일</label><input type="date" id="f_end_date" value="' + esc(trip ? (trip.end_date || '') : '') + '"></div>',
     async function() {
@@ -230,8 +236,9 @@ function openTripModal(trip) {
       if (!title) throw new Error('여행 제목을 입력해주세요');
       const start_date = val('f_start_date') || null;
       const end_date = val('f_end_date') || null;
-      if (trip) await apiPatch('trips', trip.id, { title, start_date, end_date });
-      else await apiPost('trips', { title, start_date, end_date });
+      const trip_type = document.querySelector('input[name="f_trip_type"]:checked').value;
+      if (trip) await apiPatch('trips', trip.id, { title, start_date, end_date, trip_type });
+      else await apiPost('trips', { title, start_date, end_date, trip_type });
       showTripsView();
     }
   );
