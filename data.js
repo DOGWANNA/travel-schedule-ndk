@@ -19,7 +19,7 @@ async function fetchTrips() {
 async function fetchScheduleData(tripId) {
   const filter = tripId ? 'id=eq.' + tripId + '&' : '';
   const res = await fetch(
-    SUPABASE_URL + '/rest/v1/trips?' + filter + 'select=id,title,trip_type,days(id,label,order_num,schedule_items(id,order_num,from_name,from_lat,from_lng,from_map_coord,from_place_id,to_name,to_lat,to_lng,to_map_coord,to_place_id,transport,duration,memo),spots(id,order_num,name,type,memo,naver_url,lat,lng))',
+    SUPABASE_URL + '/rest/v1/trips?' + filter + 'select=id,title,trip_type,days(id,label,order_num,schedule_items(id,order_num,from_name,from_lat,from_lng,from_map_coord,from_place_id,to_name,to_lat,to_lng,to_map_coord,to_place_id,transport,duration,memo),spots(id,order_num,name,type,memo,naver_url,lat,lng,google_place_id))',
     {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -49,7 +49,8 @@ async function fetchScheduleData(tripId) {
       })),
       spots: day.spots.slice().sort((a, b) => a.order_num - b.order_num).map(spot => ({
         id: spot.id, name: spot.name, type: spot.type,
-        memo: spot.memo, naverUrl: spot.naver_url, lat: spot.lat, lng: spot.lng
+        memo: spot.memo, naverUrl: spot.naver_url, lat: spot.lat, lng: spot.lng,
+        googlePlaceId: spot.google_place_id
       }))
     };
   });

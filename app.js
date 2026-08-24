@@ -87,11 +87,14 @@ function applySpotImage(spotCard, url) {
 }
 
 function loadSpotImageGoogle(spotCard, spot) {
-  if (!spot.lat || !spot.lng) return;
-  const url = 'https://maps.googleapis.com/maps/api/staticmap?center=' + spot.lat + ',' + spot.lng +
-    '&zoom=16&size=200x200&markers=color:0xe2703f%7C' + spot.lat + ',' + spot.lng +
-    '&key=' + GOOGLE_MAPS_API_KEY;
-  applySpotImage(spotCard, url);
+  if (!spot.googlePlaceId) return;
+  if (typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+  const svc = new google.maps.places.PlacesService(document.createElement('div'));
+  svc.getDetails({ placeId: spot.googlePlaceId, fields: ['photos'] }, function(place, status) {
+    if (status !== google.maps.places.PlacesServiceStatus.OK) return;
+    if (!place.photos || !place.photos.length) return;
+    applySpotImage(spotCard, place.photos[0].getUrl({ maxWidth: 400 }));
+  });
 }
 
 // ─── 렌더링 ────────────────────────────────────────────────────────────────────

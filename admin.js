@@ -654,6 +654,7 @@ function spotFormHtmlInternational(spot) {
     '<div class="form-field" style="flex:1"><label>경도</label>' +
     '<input type="number" id="f_lng" value="' + (v.lng || '') + '" step="any" placeholder="139.7967"></div>' +
     '</div>' +
+    '<input type="hidden" id="f_google_place_id" value="' + esc(v.googlePlaceId || '') + '">' +
     typeHtml +
     '<div class="form-field"><label>메모</label><textarea id="f_memo" placeholder="예: 유명한 사원!">' + esc(v.memo || '') + '</textarea></div>'
   );
@@ -671,6 +672,7 @@ function attachSpotFormEventsInternational(isEdit) {
     document.getElementById('f_name').value = place.name || '';
     document.getElementById('f_lat').value = place.geometry.location.lat();
     document.getElementById('f_lng').value = place.geometry.location.lng();
+    document.getElementById('f_google_place_id').value = place.place_id || '';
     if (!isEdit) {
       document.getElementById('f_type').value = guessSpotType(place.name || '');
     }
@@ -694,6 +696,7 @@ function openSpotModal(spot, count) {
       type: document.getElementById('f_type').value || 'restaurant',
       memo: val('f_memo') || null,
       naver_url: isInternational ? null : (val('f_naver_url') || null),
+      google_place_id: isInternational ? (val('f_google_place_id') || null) : null,
       lat: fval('f_lat'), lng: fval('f_lng')
     };
     if (spot) await apiPatch('spots', spot.id, data);
