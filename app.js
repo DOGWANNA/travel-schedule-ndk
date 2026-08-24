@@ -378,11 +378,14 @@ async function showMapPins(item) {
   mapAdapter.fitBounds([{ lat: fromLat, lng: fromLng }, { lat: toLat, lng: toLng }]);
 
   const isCarMode = TRANSPORT_SCHEME[item.transport] === 'car';
-  if (isCarMode) {
+  const shouldFetchRoute = isCarMode || currentTripType === 'international';
+  if (shouldFetchRoute) {
+    const routeMode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
     try {
       const { path, durationMs } = await mapAdapter.fetchRoute(
         { lat: fromLat, lng: fromLng },
-        { lat: toLat, lng: toLng }
+        { lat: toLat, lng: toLng },
+        routeMode
       );
       if (mySeq !== mapRequestSeq) return;
       mapAdapter.drawPolyline(path, { strokeColor: '#e2703f', strokeWeight: 4, strokeStyle: 'solid' });

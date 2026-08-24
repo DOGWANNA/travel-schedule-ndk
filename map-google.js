@@ -81,12 +81,18 @@ class GoogleMapAdapter extends MapAdapter {
     if (this._polyline) { this._polyline.setMap(null); this._polyline = null; }
   }
 
-  async fetchRoute(from, to) {
+  async fetchRoute(from, to, mode) {
+    const modeMap = {
+      driving: google.maps.TravelMode.DRIVING,
+      transit: google.maps.TravelMode.TRANSIT,
+      walking: google.maps.TravelMode.WALKING
+    };
+    const travelMode = modeMap[mode] || google.maps.TravelMode.DRIVING;
     return new Promise((resolve, reject) => {
       new google.maps.DirectionsService().route({
         origin: { lat: from.lat, lng: from.lng },
         destination: { lat: to.lat, lng: to.lng },
-        travelMode: google.maps.TravelMode.DRIVING
+        travelMode
       }, (result, status) => {
         if (status !== 'OK') { reject(new Error('Directions failed: ' + status)); return; }
         const route = result.routes[0];
