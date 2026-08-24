@@ -97,37 +97,36 @@ class GoogleMapAdapter extends MapAdapter {
   }
 
   async fetchRoute(from, to, mode) {
-    const travelModeMap = {
-      driving: 'DRIVE',
-      transit: 'TRANSIT',
-      walking: 'WALK'
+    const modeMap = {
+      driving: google.maps.TravelMode.DRIVING,
+      transit: google.maps.TravelMode.TRANSIT,
+      walking: google.maps.TravelMode.WALKING
     };
-    const travelMode = travelModeMap[mode] || 'DRIVE';
+    const travelMode = modeMap[mode] || google.maps.TravelMode.DRIVING;
 
-    const { Route } = await google.maps.importLibrary('routes');
-    const { encoding } = await google.maps.importLibrary('geometry');
+    return new Promise((resolve, reject) => {
+      const request = {
+        origin: { lat: from.lat, lng: from.lng },
+        destination: { lat: to.lat, lng: to.lng },
+        travelMode
+      };
+      if (travelMode === google.maps.TravelMode.TRANSIT) {
+        request.transitOptions = { departureTime: new Date() };
+      }
 
-    const request = {
-      origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
-      destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
-      travelMode,
-      computeAlternativeRoutes: false,
-      languageCode: 'ko-KR'
-    };
-
-    if (travelMode === 'TRANSIT') {
-      request.transitPreferences = { routingPreference: 'FEWER_TRANSFERS' };
-    }
-
-    const response = await new Route().computeRoutes(request);
-    if (!response.routes || !response.routes.length) throw new Error('No route found');
-
-    const r = response.routes[0];
-    const path = encoding.decodePath(r.polyline.encodedPolyline)
-      .map(p => ({ lat: p.lat(), lng: p.lng() }));
-    const durationMs = r.legs.reduce((sum, leg) => sum + parseInt(leg.duration), 0) * 1000;
-
-    return { path, durationMs };
+      new google.maps.DirectionsService().route(request, (result, status) => {
+        if (status !== 'OK') { reject(new Error('Directions failed: ' + status)); return; }
+        const route = result.routes[0];
+        const path = [];
+        route.legs.forEach(function(leg) {
+          leg.steps.forEach(function(step) {
+            step.path.forEach(function(p) { path.push({ lat: p.lat(), lng: p.lng() }); });
+          });
+        });
+        const durationMs = route.legs.reduce((sum, leg) => sum + leg.duration.value, 0) * 1000;
+        resolve({ path, durationMs });
+      });
+    });
   }
 
   makeSpotIcon(type) {
