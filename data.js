@@ -134,4 +134,4 @@ async function fetchPlaceCoordById(placeId) {
 const ROUTE_WORKER_URL = "https://naver-route-proxy.9401ndk.workers.dev";
 const PLACE_IMAGE_WORKER_URL = "https://place-image-proxy.9401ndk.workers.dev";
 const PLACE_COORD_WORKER_URL = "https://place-coord-proxy.9401ndk.workers.dev";
-const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // 발급 후 교체
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBxTkwWyjM0gGHJuROYBR7d5DbQjrsq310';
