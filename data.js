@@ -19,7 +19,7 @@ async function fetchTrips() {
 async function fetchScheduleData(tripId) {
   const filter = tripId ? 'id=eq.' + tripId + '&' : '';
   const res = await fetch(
-    SUPABASE_URL + '/rest/v1/trips?' + filter + 'select=id,title,days(id,label,order_num,schedule_items(id,order_num,from_name,from_lat,from_lng,from_map_coord,from_place_id,to_name,to_lat,to_lng,to_map_coord,to_place_id,transport,duration,memo),spots(id,order_num,name,type,memo,naver_url,lat,lng))',
+    SUPABASE_URL + '/rest/v1/trips?' + filter + 'select=id,title,trip_type,days(id,label,order_num,schedule_items(id,order_num,from_name,from_lat,from_lng,from_map_coord,from_place_id,to_name,to_lat,to_lng,to_map_coord,to_place_id,transport,duration,memo),spots(id,order_num,name,type,memo,naver_url,lat,lng))',
     {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -29,49 +29,32 @@ async function fetchScheduleData(tripId) {
   );
   if (!res.ok) throw new Error('Supabase fetch failed: ' + res.status);
   const trips = await res.json();
-  if (!trips.length) return { tripId: null, title: null, days: {} };
+  if (!trips.length) return { tripId: null, title: null, tripType: 'domestic', days: {} };
 
   const trip = trips[0];
-  const sortedDays = trip.days.slice().sort(function(a, b) { return a.order_num - b.order_num; });
+  const sortedDays = trip.days.slice().sort((a, b) => a.order_num - b.order_num);
 
   const days = {};
-  sortedDays.forEach(function(day, idx) {
+  sortedDays.forEach((day, idx) => {
     days['day' + (idx + 1)] = {
       id: day.id,
       label: day.label,
-      items: day.schedule_items.slice().sort(function(a, b) { return a.order_num - b.order_num; }).map(function(item) {
-        return {
-          id: item.id,
-          from: item.from_name,
-          fromLat: item.from_lat,
-          fromLng: item.from_lng,
-          fromMapCoord: item.from_map_coord,
-          fromPlaceId: item.from_place_id,
-          to: item.to_name,
-          toLat: item.to_lat,
-          toLng: item.to_lng,
-          toMapCoord: item.to_map_coord,
-          toPlaceId: item.to_place_id,
-          transport: item.transport,
-          duration: item.duration,
-          memo: item.memo
-        };
-      }),
-      spots: day.spots.slice().sort(function(a, b) { return a.order_num - b.order_num; }).map(function(spot) {
-        return {
-          id: spot.id,
-          name: spot.name,
-          type: spot.type,
-          memo: spot.memo,
-          naverUrl: spot.naver_url,
-          lat: spot.lat,
-          lng: spot.lng
-        };
-      })
+      items: day.schedule_items.slice().sort((a, b) => a.order_num - b.order_num).map(item => ({
+        id: item.id,
+        from: item.from_name, fromLat: item.from_lat, fromLng: item.from_lng,
+        fromMapCoord: item.from_map_coord, fromPlaceId: item.from_place_id,
+        to: item.to_name, toLat: item.to_lat, toLng: item.to_lng,
+        toMapCoord: item.to_map_coord, toPlaceId: item.to_place_id,
+        transport: item.transport, duration: item.duration, memo: item.memo
+      })),
+      spots: day.spots.slice().sort((a, b) => a.order_num - b.order_num).map(spot => ({
+        id: spot.id, name: spot.name, type: spot.type,
+        memo: spot.memo, naverUrl: spot.naver_url, lat: spot.lat, lng: spot.lng
+      }))
     };
   });
 
-  return { tripId: trip.id, title: trip.title, days: days };
+  return { tripId: trip.id, title: trip.title, tripType: trip.trip_type || 'domestic', days };
 }
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
@@ -151,3 +134,4 @@ async function fetchPlaceCoordById(placeId) {
 const ROUTE_WORKER_URL = "https://naver-route-proxy.9401ndk.workers.dev";
 const PLACE_IMAGE_WORKER_URL = "https://place-image-proxy.9401ndk.workers.dev";
 const PLACE_COORD_WORKER_URL = "https://place-coord-proxy.9401ndk.workers.dev";
+const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // 발급 후 교체
