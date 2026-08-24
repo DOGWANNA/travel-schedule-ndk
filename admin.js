@@ -630,9 +630,61 @@ function attachSpotFormEvents(isEdit) {
   });
 }
 
+function spotFormHtmlInternational(spot) {
+  const v = spot || {};
+  const typeMap = { restaurant:'🍽️ 음식점', cafe:'☕ 카페', bakery:'🥐 베이커리', bar:'🍺 바/술집', seafood:'🐟 해산물', attraction:'🏛️ 명소', museum:'🎨 박물관', nature:'🌿 자연', beach:'🏖️ 해변', park:'🌳 공원', shopping:'🛍️ 쇼핑', accommodation:'🏨 숙소' };
+
+  const typeHtml = spot
+    ? '<div class="form-field"><label>종류</label><select id="f_type">' +
+      Object.keys(typeMap).map(function(t) {
+        return '<option value="' + t + '"' + (v.type === t ? ' selected' : '') + '>' + typeMap[t] + '</option>';
+      }).join('') +
+      '</select></div>'
+    : '<input type="hidden" id="f_type" value="' + esc(v.type || 'restaurant') + '">';
+
+  return (
+    '<div class="form-section">장소 검색</div>' +
+    '<div class="url-parse-row"><input type="text" id="f_place_search" placeholder="장소 이름 입력 (예: Senso-ji Temple)"></div>' +
+    '<div class="coord-status" id="coordStatus"></div>' +
+    '<div class="form-field"><label>장소 이름</label>' +
+    '<input type="text" id="f_name" value="' + esc(v.name || '') + '" placeholder="검색 후 자동 입력" autocomplete="off"></div>' +
+    '<div class="coord-row">' +
+    '<div class="form-field" style="flex:1"><label>위도</label>' +
+    '<input type="number" id="f_lat" value="' + (v.lat || '') + '" step="any" placeholder="35.7148"></div>' +
+    '<div class="form-field" style="flex:1"><label>경도</label>' +
+    '<input type="number" id="f_lng" value="' + (v.lng || '') + '" step="any" placeholder="139.7967"></div>' +
+    '</div>' +
+    typeHtml +
+    '<div class="form-field"><label>메모</label><textarea id="f_memo" placeholder="예: 유명한 사원!">' + esc(v.memo || '') + '</textarea></div>'
+  );
+}
+
+function attachSpotFormEventsInternational(isEdit) {
+  const statusEl = document.getElementById('coordStatus');
+  const input = document.getElementById('f_place_search');
+  if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+
+  const ac = new google.maps.places.Autocomplete(input);
+  ac.addListener('place_changed', function() {
+    const place = ac.getPlace();
+    if (!place.geometry) return;
+    document.getElementById('f_name').value = place.name || '';
+    document.getElementById('f_lat').value = place.geometry.location.lat();
+    document.getElementById('f_lng').value = place.geometry.location.lng();
+    if (!isEdit) {
+      document.getElementById('f_type').value = guessSpotType(place.name || '');
+    }
+    statusEl.textContent = '✅ 장소 선택 완료';
+    statusEl.className = 'coord-status found';
+  });
+}
+
 function openSpotModal(spot, count) {
   const isEdit = !!spot;
-  openFormModal(spot ? '장소 수정' : '장소 추가', spotFormHtml(spot), async function() {
+  const isInternational = currentTrip && currentTrip.trip_type === 'international';
+  const formHtml = isInternational ? spotFormHtmlInternational(spot) : spotFormHtml(spot);
+
+  openFormModal(spot ? '장소 수정' : '장소 추가', formHtml, async function() {
     const name = val('f_name');
     if (!name) throw new Error('장소 이름을 입력해주세요');
     const data = {
@@ -641,14 +693,19 @@ function openSpotModal(spot, count) {
       name,
       type: document.getElementById('f_type').value || 'restaurant',
       memo: val('f_memo') || null,
-      naver_url: val('f_naver_url') || null,
+      naver_url: isInternational ? null : (val('f_naver_url') || null),
       lat: fval('f_lat'), lng: fval('f_lng')
     };
     if (spot) await apiPatch('spots', spot.id, data);
     else await apiPost('spots', data);
     showDayView(currentDay);
   });
-  attachSpotFormEvents(isEdit);
+
+  if (isInternational) {
+    attachSpotFormEventsInternational(isEdit);
+  } else {
+    attachSpotFormEvents(isEdit);
+  }
   document.getElementById('f_name').focus();
 }
 
