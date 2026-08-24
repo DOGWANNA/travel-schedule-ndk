@@ -35,7 +35,8 @@ function linkButtonsHtml(item) {
   if (currentTripType === 'international') {
     const origin = item.fromLat ? item.fromLat + ',' + item.fromLng : encodeURIComponent(item.from);
     const dest = item.toLat ? item.toLat + ',' + item.toLng : encodeURIComponent(item.to);
-    const googleUrl = 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + dest + '&travelmode=driving';
+    const travelmode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
+    const googleUrl = 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + dest + '&travelmode=' + travelmode;
     return `<div class="route-actions"><a class="naver-link-btn" href="${googleUrl}" target="_blank" rel="noopener noreferrer">🗺️ Google Maps에서 길찾기</a></div>`;
   }
   const hasRealRoute = !!(item.fromMapCoord && item.toMapCoord);

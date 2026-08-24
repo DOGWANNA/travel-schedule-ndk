@@ -75,6 +75,14 @@ const WEB_ROUTE_MODE = {
   "버스": "transit"
 };
 
+const GOOGLE_ROUTE_MODE = {
+  "도보": "walking",
+  "자동차": "driving",
+  "차": "driving",
+  "대중교통": "transit",
+  "버스": "transit"
+};
+
 const TRANSPORT_ICON = {
   "도보": "🚶",
   "자동차": "🚗",
