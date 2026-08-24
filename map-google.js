@@ -4,12 +4,19 @@ class GoogleMapAdapter extends MapAdapter {
     this._map = null;
     this._markers = [];
     this._polyline = null;
+    this._AdvancedMarkerElement = null;
+    this._PinElement = null;
   }
 
-  init(divId) {
-    this._map = new google.maps.Map(document.getElementById(divId), {
+  async init(divId) {
+    const { Map } = await google.maps.importLibrary('maps');
+    const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary('marker');
+    this._AdvancedMarkerElement = AdvancedMarkerElement;
+    this._PinElement = PinElement;
+    this._map = new Map(document.getElementById(divId), {
       center: { lat: 35.68, lng: 139.69 },
-      zoom: 9
+      zoom: 9,
+      mapId: GOOGLE_MAP_ID
     });
   }
 
@@ -29,26 +36,34 @@ class GoogleMapAdapter extends MapAdapter {
   }
 
   addMarker(lat, lng, options) {
-    const opts = {
+    let content;
+    if (options && options.icon && options.icon.element) {
+      content = options.icon.element;
+    } else {
+      const pin = new this._PinElement({
+        background: '#e2703f',
+        glyphColor: 'white',
+        borderColor: '#c85a2a'
+      });
+      content = pin.element;
+    }
+    const marker = new this._AdvancedMarkerElement({
       position: { lat, lng },
       map: this._map,
-      title: (options && options.title) || ''
-    };
-    if (options && options.icon && options.icon.googleIcon) {
-      opts.icon = options.icon.googleIcon;
-    }
-    const marker = new google.maps.Marker(opts);
+      title: (options && options.title) || '',
+      content
+    });
     this._markers.push(marker);
     return marker;
   }
 
   removeMarker(marker) {
-    marker.setMap(null);
+    marker.map = null;
     this._markers = this._markers.filter(m => m !== marker);
   }
 
   clearMarkers() {
-    this._markers.forEach(m => m.setMap(null));
+    this._markers.forEach(m => { m.map = null; });
     this._markers = [];
   }
 
@@ -82,43 +97,44 @@ class GoogleMapAdapter extends MapAdapter {
   }
 
   async fetchRoute(from, to, mode) {
-    const modeMap = {
-      driving: google.maps.TravelMode.DRIVING,
-      transit: google.maps.TravelMode.TRANSIT,
-      walking: google.maps.TravelMode.WALKING
+    const travelModeMap = {
+      driving: 'DRIVE',
+      transit: 'TRANSIT',
+      walking: 'WALK'
     };
-    const travelMode = modeMap[mode] || google.maps.TravelMode.DRIVING;
-    return new Promise((resolve, reject) => {
-      const request = {
-        origin: { lat: from.lat, lng: from.lng },
-        destination: { lat: to.lat, lng: to.lng },
-        travelMode
-      };
-      if (travelMode === google.maps.TravelMode.TRANSIT) {
-        request.transitOptions = { departureTime: new Date() };
-      }
-      new google.maps.DirectionsService().route(request, (result, status) => {
-        if (status !== 'OK') { reject(new Error('Directions failed: ' + status)); return; }
-        const route = result.routes[0];
-        const path = route.overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
-        const durationMs = route.legs.reduce((sum, leg) => sum + leg.duration.value, 0) * 1000;
-        resolve({ path, durationMs });
-      });
-    });
+    const travelMode = travelModeMap[mode] || 'DRIVE';
+
+    const { Route } = await google.maps.importLibrary('routes');
+    const { encoding } = await google.maps.importLibrary('geometry');
+
+    const request = {
+      origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
+      destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
+      travelMode,
+      computeAlternativeRoutes: false,
+      languageCode: 'ko-KR'
+    };
+
+    if (travelMode === 'TRANSIT') {
+      request.transitPreferences = { routingPreference: 'FEWER_TRANSFERS' };
+    }
+
+    const response = await new Route().computeRoutes(request);
+    if (!response.routes || !response.routes.length) throw new Error('No route found');
+
+    const r = response.routes[0];
+    const path = encoding.decodePath(r.polyline.encodedPolyline)
+      .map(p => ({ lat: p.lat(), lng: p.lng() }));
+    const durationMs = r.legs.reduce((sum, leg) => sum + parseInt(leg.duration), 0) * 1000;
+
+    return { path, durationMs };
   }
 
   makeSpotIcon(type) {
     const emoji = SPOT_TYPE_ICON[type] || SPOT_TYPE_ICON.default;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34">
-      <circle cx="17" cy="17" r="17" fill="#e2703f"/>
-      <text x="17" y="23" text-anchor="middle" font-size="17">${emoji}</text>
-    </svg>`;
-    return {
-      googleIcon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-        scaledSize: new google.maps.Size(34, 34),
-        anchor: new google.maps.Point(17, 17)
-      }
-    };
+    const el = document.createElement('div');
+    el.style.cssText = 'width:34px;height:34px;border-radius:50%;background:#e2703f;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;';
+    el.textContent = emoji;
+    return { element: el };
   }
 }

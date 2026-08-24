@@ -483,7 +483,7 @@ async function init() {
   }
 
   mapAdapter = await loadMapSDK(currentTripType);
-  mapAdapter.init('naverMap');
+  await mapAdapter.init('naverMap');
 
   renderDayTabs();
   renderScheduleList();

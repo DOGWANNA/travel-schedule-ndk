@@ -144,3 +144,4 @@ const ROUTE_WORKER_URL = "https://naver-route-proxy.9401ndk.workers.dev";
 const PLACE_IMAGE_WORKER_URL = "https://place-image-proxy.9401ndk.workers.dev";
 const PLACE_COORD_WORKER_URL = "https://place-coord-proxy.9401ndk.workers.dev";
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBxTkwWyjM0gGHJuROYBR7d5DbQjrsq310';
+const GOOGLE_MAP_ID = 'DEMO_MAP_ID'; // TODO: Google Cloud Console → 지도 관리에서 생성한 Map ID로 교체
