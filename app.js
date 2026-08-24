@@ -392,11 +392,12 @@ async function showMapPins(item) {
         { lat: toLat, lng: toLng },
         routeMode
       );
-      if (mySeq !== mapRequestSeq) return;
+      console.log('[route] OK', routeMode, 'path:', path.length, 'pts, duration:', durationMs);
+      if (mySeq !== mapRequestSeq) { console.log('[route] seq mismatch, skip draw'); return; }
       mapAdapter.drawPolyline(path, { strokeColor: '#e2703f', strokeWeight: 4, strokeStyle: 'solid' });
       if (durationMs) updateDurationDisplay(durationMs);
       return;
-    } catch (e) { console.warn('[route]', routeMode, e.message); }
+    } catch (e) { console.error('[route] FAILED', routeMode, e.message, e); }
   }
 
   if (mySeq !== mapRequestSeq) return;
