@@ -104,24 +104,36 @@ class GoogleMapAdapter extends MapAdapter {
   }
 
   async _fetchTransitRoute(from, to) {
-    const { Route } = await google.maps.importLibrary('routes');
-    const { encoding } = await google.maps.importLibrary('geometry');
-
-    const response = await new Route().computeRoutes({
-      origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
-      destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
-      travelMode: 'TRANSIT',
-      computeAlternativeRoutes: false,
-      languageCode: 'ko-KR',
-      transitPreferences: { routingPreference: 'FEWER_TRANSFERS' }
+    const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+        'X-Goog-FieldMask': 'routes.duration,routes.polyline.encodedPolyline'
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
+        destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
+        travelMode: 'TRANSIT',
+        computeAlternativeRoutes: false,
+        languageCode: 'ko-KR',
+        transitPreferences: { routingPreference: 'FEWER_TRANSFERS' }
+      })
     });
 
-    if (!response.routes || !response.routes.length) throw new Error('No transit route found');
+    if (!res.ok) {
+      const errText = (await res.text()).slice(0, 300);
+      throw new Error('Routes API ' + res.status + ': ' + errText);
+    }
 
-    const r = response.routes[0];
+    const data = await res.json();
+    if (!data.routes || !data.routes.length) throw new Error('No transit route: ' + JSON.stringify(data).slice(0, 200));
+
+    const r = data.routes[0];
+    const { encoding } = await google.maps.importLibrary('geometry');
     const path = encoding.decodePath(r.polyline.encodedPolyline)
       .map(p => ({ lat: p.lat(), lng: p.lng() }));
-    const durationMs = r.legs.reduce((sum, leg) => sum + parseInt(leg.duration), 0) * 1000;
+    const durationMs = parseInt(r.duration) * 1000;
     return { path, durationMs };
   }
 

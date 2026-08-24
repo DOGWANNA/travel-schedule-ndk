@@ -333,6 +333,9 @@ function formatDuration(durationMs) {
 
 function updateDurationDisplay(durationMs) {
   const text = formatDuration(durationMs) + " (실시간)";
+  if (activeDay && selectedIndex !== null && scheduleData[activeDay]) {
+    scheduleData[activeDay].items[selectedIndex].duration = text;
+  }
   document.querySelectorAll(".schedule-card.selected .duration-chip").forEach((el) => {
     el.textContent = "⏱ " + text;
   });
