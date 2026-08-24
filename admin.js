@@ -190,7 +190,7 @@ async function showTripsView() {
   renderBreadcrumb();
   contentEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">불러오는 중...</p>';
   let trips;
-  try { trips = await apiGet('trips?select=*&order=created_at'); }
+  try { trips = await apiGet('trips?select=*&order=start_date.desc.nullslast,created_at.desc'); }
   catch (e) { contentEl.innerHTML = '<p class="empty-hint" style="margin-top:16px;">불러오기 실패: ' + e.message + '</p>'; return; }
 
   let html = '<div class="view-header"><button class="btn-add" id="addTripBtn">+ 새 여행 추가</button></div>';
