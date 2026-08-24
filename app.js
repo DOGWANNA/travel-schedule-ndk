@@ -86,6 +86,14 @@ function applySpotImage(spotCard, url) {
   img.src = url;
 }
 
+function loadSpotImageGoogle(spotCard, spot) {
+  if (!spot.lat || !spot.lng) return;
+  const url = 'https://maps.googleapis.com/maps/api/staticmap?center=' + spot.lat + ',' + spot.lng +
+    '&zoom=16&size=200x200&markers=color:0xe2703f%7C' + spot.lat + ',' + spot.lng +
+    '&key=' + GOOGLE_MAPS_API_KEY;
+  applySpotImage(spotCard, url);
+}
+
 // ─── 렌더링 ────────────────────────────────────────────────────────────────────
 
 function renderDayTabs() {
@@ -197,6 +205,7 @@ function renderScheduleList() {
       `;
 
       if (currentTripType === 'domestic') loadSpotImage(spotCard, spot.naverUrl);
+      else loadSpotImageGoogle(spotCard, spot);
 
       spotCard.addEventListener("click", () => {
         selectedSpotIndex = (selectedSpotIndex === globalIdx) ? null : globalIdx;
