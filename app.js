@@ -365,28 +365,34 @@ function setDurationUnsupported() {
 
 function transitStepsHtml(steps) {
   if (!steps || !steps.length) return '';
-  var rows = steps.map(function(s, i) {
+  var items = [];
+  steps.forEach(function(s, i) {
+    if (i > 0) items.push('<div class="ts-arrow">↓</div>');
     if (s.mode === 'WALKING') {
-      return '<div class="transit-step walking-step">' +
-        '<span class="ts-icon">🚶</span>' +
-        '<div class="ts-body"><span class="ts-label">도보</span><span class="ts-dur">' + s.duration + '</span></div>' +
-        '</div>';
+      items.push(
+        '<div class="ts-walk">' +
+          '<span class="ts-walk-icon">🚶</span>' +
+          '<span>도보 · ' + s.duration + '</span>' +
+        '</div>'
+      );
+    } else {
+      var lcAttr = s.lineColor ? ' style="--lc:' + s.lineColor + '"' : '';
+      var subParts = [];
+      if (s.headsign) subParts.push(s.headsign + ' 방향');
+      subParts.push(s.numStops + '정거장');
+      subParts.push(s.duration);
+      items.push(
+        '<div class="ts-transit-card"' + lcAttr + '>' +
+          '<div class="ts-tc-head">' +
+            '<span class="ts-tc-icon">' + s.icon + '</span>' +
+            '<span class="ts-tc-name">' + s.lineName + '</span>' +
+          '</div>' +
+          '<div class="ts-tc-sub">' + subParts.join(' · ') + '</div>' +
+        '</div>'
+      );
     }
-    var dotStyle = s.lineColor ? ' style="background:' + s.lineColor + '"' : '';
-    var headsignHtml = s.headsign ? '<span class="ts-headsign">' + s.headsign + ' 방향</span>' : '';
-    return '<div class="transit-step transit-step--transit">' +
-      '<span class="ts-icon">' + s.icon + '</span>' +
-      '<div class="ts-body">' +
-        '<div class="ts-header">' +
-          '<span class="ts-dot"' + dotStyle + '></span>' +
-          '<span class="ts-line">' + s.lineName + '</span>' +
-          headsignHtml +
-        '</div>' +
-        '<div class="ts-detail">' + s.numStops + '정거장 · ' + s.duration + '</div>' +
-      '</div>' +
-      '</div>';
   });
-  return '<div class="transit-step-list">' + rows.join('') + '</div>';
+  return '<div class="transit-step-list"><div class="ts-title">경로 안내</div>' + items.join('') + '</div>';
 }
 
 function renderTransitStepsInCard(steps) {

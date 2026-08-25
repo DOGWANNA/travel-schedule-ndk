@@ -255,59 +255,57 @@ header h1 {
 }
 .map-selected-info .route-line .arrow { color: var(--accent); }
 .transit-step-list {
-  margin: 10px 0 6px;
+  margin: 10px 0 8px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 3px;
 }
-.transit-step {
+.ts-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.ts-walk {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 5px 0;
-  font-size: 13px;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-sub);
+  padding: 2px 4px;
 }
-.transit-step + .transit-step {
-  border-top: 1px solid var(--border);
+.ts-walk-icon { font-size: 13px; }
+.ts-arrow {
+  font-size: 11px;
+  color: var(--border);
+  padding-left: 5px;
+  line-height: 1.2;
+  user-select: none;
 }
-.ts-icon {
-  font-size: 15px;
-  min-width: 22px;
-  text-align: center;
-  padding-top: 1px;
+.ts-transit-card {
+  border-left: 3px solid var(--lc, var(--accent));
+  background: rgba(0,0,0,0.025);
+  border-radius: 0 8px 8px 0;
+  padding: 8px 10px 7px;
 }
-.ts-body { flex: 1; }
-.ts-header {
+.ts-tc-head {
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
 }
-.ts-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-}
-.ts-line { font-weight: 700; }
-.ts-label { font-weight: 600; color: var(--text-sub); }
-.ts-headsign {
+.ts-tc-icon { font-size: 14px; line-height: 1; }
+.ts-tc-name { line-height: 1.2; }
+.ts-tc-sub {
   font-size: 11px;
   color: var(--text-sub);
-  background: var(--accent-soft);
-  border-radius: 4px;
-  padding: 1px 5px;
-}
-.ts-dur {
-  margin-left: 6px;
-  color: var(--text-sub);
-  font-size: 12px;
-}
-.ts-detail {
-  font-size: 12px;
-  color: var(--text-sub);
-  margin-top: 2px;
+  margin-top: 4px;
+  padding-left: 21px;
+  line-height: 1.4;
 }
 .empty-hint { color: var(--text-sub); font-size: 13px; }
 .info-btn {
