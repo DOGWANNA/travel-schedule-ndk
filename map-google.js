@@ -116,10 +116,16 @@ class GoogleMapAdapter extends MapAdapter {
           destination: { lat: to.lat, lng: to.lng },
           travelMode: TravelModeEnum ? TravelModeEnum.TRANSIT : 'TRANSIT'
         };
+        const fetchFields = [
+          'routes.duration',
+          'routes.polyline.encodedPolyline',
+          'routes.legs.duration',
+          'routes.legs.steps.polyline.encodedPolyline'
+        ];
         const callFn = typeof RouteClass.computeRoutes === 'function'
-          ? function(req) { return RouteClass.computeRoutes(req); }
-          : function(req) { return new RouteClass().computeRoutes(req); };
-        const result = await callFn(request);
+          ? function(req, f) { return RouteClass.computeRoutes(req, f); }
+          : function(req, f) { return new RouteClass().computeRoutes(req, f); };
+        const result = await callFn(request, fetchFields);
         try {
           console.log('[routes.Route result type]:', typeof result);
           if (result && result.routes) {
