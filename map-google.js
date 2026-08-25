@@ -108,21 +108,33 @@ class GoogleMapAdapter extends MapAdapter {
     // 1차: google.maps.routes.Route (Google 권장 신규 API)
     try {
       const routesLib = await google.maps.importLibrary('routes');
-      console.log('[routes lib keys]:', Object.keys(routesLib).join(', '));
       const RouteClass = routesLib.Route;
+      const TravelModeEnum = routesLib.TravelMode;
       if (RouteClass) {
         const request = {
           origin: { location: { latLng: new google.maps.LatLng(from.lat, from.lng) } },
           destination: { location: { latLng: new google.maps.LatLng(to.lat, to.lng) } },
-          travelMode: 'TRANSIT',
-          languageCode: 'ko-KR',
-          transitPreferences: { routingPreference: 'FEWER_TRANSFERS' }
+          travelMode: TravelModeEnum ? TravelModeEnum.TRANSIT : 'TRANSIT'
         };
         const callFn = typeof RouteClass.computeRoutes === 'function'
-          ? function(req, opts) { return RouteClass.computeRoutes(req, opts); }
-          : function(req, opts) { return new RouteClass().computeRoutes(req, opts); };
-        const result = await callFn(request, { fields: ['routes'] });
-        console.log('[routes.Route result]:', JSON.stringify(result).slice(0, 500));
+          ? function(req) { return RouteClass.computeRoutes(req); }
+          : function(req) { return new RouteClass().computeRoutes(req); };
+        const result = await callFn(request);
+        try {
+          console.log('[routes.Route result type]:', typeof result);
+          if (result && result.routes) {
+            console.log('[routes count]:', result.routes.length);
+            if (result.routes.length > 0) {
+              var r0 = result.routes[0];
+              console.log('[route[0] keys]:', Object.keys(r0).join(', '));
+              console.log('[route[0].duration]:', r0.duration);
+              console.log('[route[0].polyline]:', r0.polyline);
+              console.log('[route[0].legs count]:', r0.legs ? r0.legs.length : 'no legs');
+            }
+          } else {
+            console.log('[routes.Route result raw]:', result);
+          }
+        } catch (_) {}
         if (result && result.routes && result.routes.length) {
           const r = result.routes[0];
           let path = [];
@@ -137,7 +149,7 @@ class GoogleMapAdapter extends MapAdapter {
               });
             });
           }
-          const durationMs = parseInt(r.duration || '0') * 1000;
+          const durationMs = r.duration ? (typeof r.duration === 'string' ? parseInt(r.duration) * 1000 : (r.duration.seconds || 0) * 1000) : 0;
           if (path.length) return { path, durationMs };
         }
         throw new Error('routes.Route: no usable route');
