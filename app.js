@@ -151,8 +151,6 @@ function renderScheduleList() {
         ${durationText ? `<span class="chip duration-chip">⏱ ${durationText}</span>` : ''}
       </div>
       <div class="schedule-detail">
-        <div class="row"><div class="k">이동 수단</div><div class="v">${item.transport}</div></div>
-        ${durationText ? `<div class="row"><div class="k">이동 시간</div><div class="v duration-value">${durationText}</div></div>` : ''}
         ${storedStepsHtml}
         ${item.memo ? `<div class="memo-box"><div class="memo-label">일정 내용</div><div class="memo-text">${item.memo}</div></div>` : ''}
         ${linkButtonsHtml(item)}
@@ -370,9 +368,12 @@ function transitStepsHtml(steps) {
     if (i > 0) items.push('<div class="ts-arrow">↓</div>');
     if (s.mode === 'WALKING') {
       items.push(
-        '<div class="ts-walk">' +
-          '<span class="ts-walk-icon">🚶</span>' +
-          '<span>도보 · ' + s.duration + '</span>' +
+        '<div class="ts-transit-card ts-walk-card">' +
+          '<div class="ts-tc-head">' +
+            '<span class="ts-tc-icon">🚶</span>' +
+            '<span class="ts-tc-name">도보</span>' +
+          '</div>' +
+          '<div class="ts-tc-sub">' + s.duration + '</div>' +
         '</div>'
       );
     } else {

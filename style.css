@@ -261,26 +261,15 @@ header h1 {
   gap: 3px;
 }
 .ts-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--text-sub);
-  margin-bottom: 6px;
-  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 8px;
 }
-.ts-walk {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-sub);
-  padding: 2px 4px;
-}
-.ts-walk-icon { font-size: 13px; }
 .ts-arrow {
   font-size: 11px;
   color: var(--border);
-  padding-left: 5px;
+  padding-left: 8px;
   line-height: 1.2;
   user-select: none;
 }
@@ -289,6 +278,9 @@ header h1 {
   background: rgba(0,0,0,0.025);
   border-radius: 0 8px 8px 0;
   padding: 8px 10px 7px;
+}
+.ts-walk-card {
+  --lc: #aaaaaa;
 }
 .ts-tc-head {
   display: flex;
