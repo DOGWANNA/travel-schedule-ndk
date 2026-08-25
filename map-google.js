@@ -116,7 +116,6 @@ class GoogleMapAdapter extends MapAdapter {
         destination: { lat: to.lat, lng: to.lng },
         travelMode: TravelMode ? TravelMode.TRANSIT : 'TRANSIT',
         departureTime: depTime,
-        transitPreference: 'TRANSIT_PREFERENCE_UNSPECIFIED',
         fields: ['path', 'legs']
       });
       console.log('[routes.Route count]:', routes ? routes.length : 0);
