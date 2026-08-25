@@ -102,14 +102,59 @@ class GoogleMapAdapter extends MapAdapter {
     return this._fetchDrivingRoute(from, to, mode);
   }
 
-  _fetchTransitRoute(from, to) {
+  async _fetchTransitRoute(from, to) {
+    const { encoding } = await google.maps.importLibrary('geometry');
+
+    // 1차: google.maps.routes.Route (Google 권장 신규 API)
+    try {
+      const routesLib = await google.maps.importLibrary('routes');
+      console.log('[routes lib keys]:', Object.keys(routesLib).join(', '));
+      const RouteClass = routesLib.Route;
+      if (RouteClass) {
+        const request = {
+          origin: { location: { latLng: new google.maps.LatLng(from.lat, from.lng) } },
+          destination: { location: { latLng: new google.maps.LatLng(to.lat, to.lng) } },
+          travelMode: 'TRANSIT',
+          languageCode: 'ko-KR',
+          transitPreferences: { routingPreference: 'FEWER_TRANSFERS' }
+        };
+        const callFn = typeof RouteClass.computeRoutes === 'function'
+          ? function(req, opts) { return RouteClass.computeRoutes(req, opts); }
+          : function(req, opts) { return new RouteClass().computeRoutes(req, opts); };
+        const result = await callFn(request, { fields: ['routes'] });
+        console.log('[routes.Route result]:', JSON.stringify(result).slice(0, 500));
+        if (result && result.routes && result.routes.length) {
+          const r = result.routes[0];
+          let path = [];
+          if (r.polyline && r.polyline.encodedPolyline) {
+            path = encoding.decodePath(r.polyline.encodedPolyline).map(function(p) { return { lat: p.lat(), lng: p.lng() }; });
+          } else if (r.legs) {
+            r.legs.forEach(function(leg) {
+              (leg.steps || []).forEach(function(step) {
+                if (step.polyline && step.polyline.encodedPolyline) {
+                  encoding.decodePath(step.polyline.encodedPolyline).forEach(function(p) { path.push({ lat: p.lat(), lng: p.lng() }); });
+                }
+              });
+            });
+          }
+          const durationMs = parseInt(r.duration || '0') * 1000;
+          if (path.length) return { path, durationMs };
+        }
+        throw new Error('routes.Route: no usable route');
+      }
+    } catch (e) {
+      console.warn('[routes.Route failed]:', e.message);
+    }
+
+    // 2차 fallback: DirectionsService TRANSIT
     return new Promise(function(resolve, reject) {
       new google.maps.DirectionsService().route({
         origin: { lat: from.lat, lng: from.lng },
         destination: { lat: to.lat, lng: to.lng },
-        travelMode: google.maps.TravelMode.TRANSIT
+        travelMode: google.maps.TravelMode.TRANSIT,
+        transitOptions: { departureTime: new Date() }
       }, function(result, status) {
-        if (status !== 'OK') { reject(new Error('Transit Directions failed: ' + status)); return; }
+        if (status !== 'OK') { reject(new Error('Transit: ' + status)); return; }
         const route = result.routes[0];
         const path = [];
         route.legs.forEach(function(leg) {
