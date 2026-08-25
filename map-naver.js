@@ -3,7 +3,7 @@ class NaverMapAdapter extends MapAdapter {
     super();
     this._map = null;
     this._markers = [];
-    this._polyline = null;
+    this._polylines = [];
   }
 
   init(divId) {
@@ -50,23 +50,25 @@ class NaverMapAdapter extends MapAdapter {
 
   drawPolyline(points, options) {
     const path = points.map(p => new naver.maps.LatLng(p.lat, p.lng));
-    this._polyline = new naver.maps.Polyline({
+    const polyline = new naver.maps.Polyline({
       map: this._map,
       path,
       strokeColor: (options && options.strokeColor) || '#e2703f',
       strokeWeight: (options && options.strokeWeight) || 4,
       strokeStyle: (options && options.strokeStyle) || 'solid'
     });
-    return this._polyline;
+    this._polylines.push(polyline);
+    return polyline;
   }
 
   removePolyline(polyline) {
     if (polyline) polyline.setMap(null);
-    if (this._polyline === polyline) this._polyline = null;
+    this._polylines = this._polylines.filter(p => p !== polyline);
   }
 
   clearPolyline() {
-    if (this._polyline) { this._polyline.setMap(null); this._polyline = null; }
+    this._polylines.forEach(p => p.setMap(null));
+    this._polylines = [];
   }
 
   async fetchRoute(from, to) {

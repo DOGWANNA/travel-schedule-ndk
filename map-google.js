@@ -3,7 +3,7 @@ class GoogleMapAdapter extends MapAdapter {
     super();
     this._map = null;
     this._markers = [];
-    this._polyline = null;
+    this._polylines = [];
     this._AdvancedMarkerElement = null;
     this._PinElement = null;
   }
@@ -82,17 +82,19 @@ class GoogleMapAdapter extends MapAdapter {
         repeat: '20px'
       }];
     }
-    this._polyline = new google.maps.Polyline(polylineOpts);
-    return this._polyline;
+    const polyline = new google.maps.Polyline(polylineOpts);
+    this._polylines.push(polyline);
+    return polyline;
   }
 
   removePolyline(polyline) {
     if (polyline) polyline.setMap(null);
-    if (this._polyline === polyline) this._polyline = null;
+    this._polylines = this._polylines.filter(p => p !== polyline);
   }
 
   clearPolyline() {
-    if (this._polyline) { this._polyline.setMap(null); this._polyline = null; }
+    this._polylines.forEach(p => p.setMap(null));
+    this._polylines = [];
   }
 
   async fetchRoute(from, to, mode) {
@@ -104,6 +106,7 @@ class GoogleMapAdapter extends MapAdapter {
 
   _fetchTransitRoute(from, to) {
     const VEHICLE_ICON = { SUBWAY: '🚇', BUS: '🚌', TRAIN: '🚆', RAIL: '🚆', TRAM: '🚊' };
+    const VEHICLE_DEFAULT_COLOR = { SUBWAY: '#0067FF', BUS: '#28a745', TRAIN: '#6f42c1', RAIL: '#6f42c1', TRAM: '#fd7e14' };
     return new Promise(function(resolve, reject) {
       new google.maps.DirectionsService().route({
         origin: { lat: from.lat, lng: from.lng },
@@ -115,26 +118,35 @@ class GoogleMapAdapter extends MapAdapter {
         const route = result.routes[0];
         const path = [];
         const transitSteps = [];
+        const stepPaths = [];
         route.legs.forEach(function(leg) {
           leg.steps.forEach(function(step) {
-            step.path.forEach(function(p) { path.push({ lat: p.lat(), lng: p.lng() }); });
+            var stepPath = step.path.map(function(p) { return { lat: p.lat(), lng: p.lng() }; });
+            stepPath.forEach(function(p) { path.push(p); });
             if (step.travel_mode === 'WALKING') {
               transitSteps.push({ mode: 'WALKING', duration: step.duration.text });
+              stepPaths.push({ path: stepPath, mode: 'WALKING', color: '#aaaaaa', strokeStyle: 'shortdash', strokeWeight: 3 });
             } else if (step.travel_mode === 'TRANSIT' && step.transit) {
               var t = step.transit;
+              var vtype = (t.line && t.line.vehicle && t.line.vehicle.type) || 'BUS';
+              var rawColor = (t.line && t.line.color) || null;
+              var lineColor = rawColor ? (rawColor.startsWith('#') ? rawColor : '#' + rawColor) : (VEHICLE_DEFAULT_COLOR[vtype] || '#0067FF');
               transitSteps.push({
                 mode: 'TRANSIT',
                 duration: step.duration.text,
                 lineName: (t.line && (t.line.short_name || t.line.name)) || '',
                 numStops: t.num_stops || 0,
-                vehicleType: (t.line && t.line.vehicle && t.line.vehicle.type) || 'BUS',
-                icon: VEHICLE_ICON[(t.line && t.line.vehicle && t.line.vehicle.type)] || '🚌'
+                vehicleType: vtype,
+                icon: VEHICLE_ICON[vtype] || '🚌',
+                lineColor: lineColor,
+                headsign: t.headsign || ''
               });
+              stepPaths.push({ path: stepPath, mode: 'TRANSIT', color: lineColor, strokeStyle: 'solid', strokeWeight: 5 });
             }
           });
         });
         const durationMs = route.legs.reduce(function(sum, leg) { return sum + leg.duration.value; }, 0) * 1000;
-        resolve({ path, durationMs, transitSteps });
+        resolve({ path, durationMs, transitSteps, stepPaths });
       });
     });
   }

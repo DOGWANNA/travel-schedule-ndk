@@ -138,6 +138,7 @@ function renderScheduleList() {
     const isCar = TRANSPORT_SCHEME[item.transport] === "car";
     const durationText = item.duration || (isCar ? "계산 중..." : null);
 
+    const storedStepsHtml = (selectedIndex === idx && item.transitSteps) ? transitStepsHtml(item.transitSteps) : '';
     card.innerHTML = `
       <div class="schedule-route">
         <span class="schedule-index">${idx + 1}</span>
@@ -152,6 +153,7 @@ function renderScheduleList() {
       <div class="schedule-detail">
         <div class="row"><div class="k">이동 수단</div><div class="v">${item.transport}</div></div>
         ${durationText ? `<div class="row"><div class="k">이동 시간</div><div class="v duration-value">${durationText}</div></div>` : ''}
+        ${storedStepsHtml}
         ${item.memo ? `<div class="memo-box"><div class="memo-label">일정 내용</div><div class="memo-text">${item.memo}</div></div>` : ''}
         ${linkButtonsHtml(item)}
       </div>
@@ -286,7 +288,6 @@ function renderMapPanel() {
     <div class="map-selected-info">
       <div class="route-line">${item.from} <span class="arrow">&#8594;</span> ${item.to}</div>
       <div>${item.transport}${mapDurationText ? ' · <span class="duration-value">' + mapDurationText + '</span>' : ''}</div>
-      <div class="transit-steps"></div>
       ${linkButtonsHtml(item)}
     </div>
   `;
@@ -362,14 +363,44 @@ function setDurationUnsupported() {
   if (mapDurationEl) mapDurationEl.textContent = text;
 }
 
-function renderTransitSteps(steps) {
-  const el = mapSelectedInfoEl.querySelector('.transit-steps');
-  if (!el || !steps || !steps.length) return;
-  const parts = steps.map(function(s) {
-    if (s.mode === 'WALKING') return '🚶 ' + s.duration;
-    return s.icon + ' ' + s.lineName + (s.numStops ? ' ' + s.numStops + '정거장' : '');
+function transitStepsHtml(steps) {
+  if (!steps || !steps.length) return '';
+  var rows = steps.map(function(s, i) {
+    if (s.mode === 'WALKING') {
+      return '<div class="transit-step walking-step">' +
+        '<span class="ts-icon">🚶</span>' +
+        '<div class="ts-body"><span class="ts-label">도보</span><span class="ts-dur">' + s.duration + '</span></div>' +
+        '</div>';
+    }
+    var dotStyle = s.lineColor ? ' style="background:' + s.lineColor + '"' : '';
+    var headsignHtml = s.headsign ? '<span class="ts-headsign">' + s.headsign + ' 방향</span>' : '';
+    return '<div class="transit-step transit-step--transit">' +
+      '<span class="ts-icon">' + s.icon + '</span>' +
+      '<div class="ts-body">' +
+        '<div class="ts-header">' +
+          '<span class="ts-dot"' + dotStyle + '></span>' +
+          '<span class="ts-line">' + s.lineName + '</span>' +
+          headsignHtml +
+        '</div>' +
+        '<div class="ts-detail">' + s.numStops + '정거장 · ' + s.duration + '</div>' +
+      '</div>' +
+      '</div>';
   });
-  el.innerHTML = '<div class="transit-steps-summary">' + parts.join(' → ') + '</div>';
+  return '<div class="transit-step-list">' + rows.join('') + '</div>';
+}
+
+function renderTransitStepsInCard(steps) {
+  const card = document.querySelector('.schedule-card.selected');
+  if (!card || !steps || !steps.length) return;
+  const detail = card.querySelector('.schedule-detail');
+  if (!detail) return;
+  const existing = detail.querySelector('.transit-step-list');
+  if (existing) existing.remove();
+  const linksEl = detail.querySelector('.route-actions');
+  const el = document.createElement('div');
+  el.innerHTML = transitStepsHtml(steps);
+  const node = el.firstChild;
+  if (node) detail.insertBefore(node, linksEl || null);
 }
 
 async function showMapPins(item) {
@@ -413,16 +444,27 @@ async function showMapPins(item) {
   if (shouldFetchRoute) {
     const routeMode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
     try {
-      const { path, durationMs, transitSteps } = await mapAdapter.fetchRoute(
+      const { path, durationMs, transitSteps, stepPaths } = await mapAdapter.fetchRoute(
         { lat: fromLat, lng: fromLng },
         { lat: toLat, lng: toLng },
         routeMode
       );
       console.log('[route] OK', routeMode, 'path:', path.length, 'pts, duration:', durationMs);
       if (mySeq !== mapRequestSeq) { console.log('[route] seq mismatch, skip draw'); return; }
-      mapAdapter.drawPolyline(path, { strokeColor: '#e2703f', strokeWeight: 4, strokeStyle: 'solid' });
+      if (stepPaths && stepPaths.length) {
+        stepPaths.forEach(function(sp) {
+          mapAdapter.drawPolyline(sp.path, { strokeColor: sp.color, strokeWeight: sp.strokeWeight || 4, strokeStyle: sp.strokeStyle || 'solid' });
+        });
+      } else {
+        mapAdapter.drawPolyline(path, { strokeColor: '#e2703f', strokeWeight: 4, strokeStyle: 'solid' });
+      }
       if (durationMs) updateDurationDisplay(durationMs);
-      if (transitSteps && transitSteps.length) renderTransitSteps(transitSteps);
+      if (transitSteps && transitSteps.length) {
+        if (activeDay && selectedIndex !== null && scheduleData[activeDay]) {
+          scheduleData[activeDay].items[selectedIndex].transitSteps = transitSteps;
+        }
+        renderTransitStepsInCard(transitSteps);
+      }
       return;
     } catch (e) {
       console.warn('[route] FAILED', routeMode, e.message);
