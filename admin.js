@@ -482,24 +482,19 @@ function attachItemFormEventsInternational() {
 }
 
 function openItemModal(item, count) {
-  const isInternational = currentTrip && currentTrip.trip_type === 'international';
-  const formHtml = isInternational ? itemFormHtmlInternational(item) : itemFormHtml(item);
+  const formHtml = itemFormHtmlInternational(item);
 
   openFormModal(item ? '이동 일정 수정' : '이동 일정 추가', formHtml, async function() {
     const from_name = val('f_from_name');
     const to_name = val('f_to_name');
-    if (!from_name || !to_name) throw new Error(
-      isInternational ? '출발지와 도착지를 검색해서 선택해주세요.' : 'URL을 입력하고 추출 버튼을 눌러주세요.'
-    );
+    if (!from_name || !to_name) throw new Error('출발지와 도착지를 검색해서 선택해주세요.');
     const data = {
       day_id: currentDay.id,
       order_num: item ? item.order_num : count + 1,
       from_name, from_lat: fval('f_from_lat'), from_lng: fval('f_from_lng'),
-      from_map_coord: isInternational ? null : (val('f_from_map_coord') || null),
-      from_place_id: isInternational ? null : (val('f_from_place_id') || null),
+      from_map_coord: null, from_place_id: null,
       to_name, to_lat: fval('f_to_lat'), to_lng: fval('f_to_lng'),
-      to_map_coord: isInternational ? null : (val('f_to_map_coord') || null),
-      to_place_id: isInternational ? null : (val('f_to_place_id') || null),
+      to_map_coord: null, to_place_id: null,
       transport: document.getElementById('f_transport').value || '자동차',
       duration: null,
       memo: val('f_memo') || null
@@ -509,11 +504,7 @@ function openItemModal(item, count) {
     showDayView(currentDay);
   });
 
-  if (isInternational) {
-    attachItemFormEventsInternational();
-  } else {
-    attachItemFormEvents();
-  }
+  attachItemFormEventsInternational();
 }
 
 function confirmDeleteItem(item) {
@@ -683,8 +674,7 @@ function attachSpotFormEventsInternational(isEdit) {
 
 function openSpotModal(spot, count) {
   const isEdit = !!spot;
-  const isInternational = currentTrip && currentTrip.trip_type === 'international';
-  const formHtml = isInternational ? spotFormHtmlInternational(spot) : spotFormHtml(spot);
+  const formHtml = spotFormHtmlInternational(spot);
 
   openFormModal(spot ? '장소 수정' : '장소 추가', formHtml, async function() {
     const name = val('f_name');
@@ -695,8 +685,8 @@ function openSpotModal(spot, count) {
       name,
       type: document.getElementById('f_type').value || 'restaurant',
       memo: val('f_memo') || null,
-      naver_url: isInternational ? null : (val('f_naver_url') || null),
-      google_place_id: isInternational ? (val('f_google_place_id') || null) : null,
+      naver_url: null,
+      google_place_id: val('f_google_place_id') || null,
       lat: fval('f_lat'), lng: fval('f_lng')
     };
     if (spot) await apiPatch('spots', spot.id, data);
@@ -704,11 +694,7 @@ function openSpotModal(spot, count) {
     showDayView(currentDay);
   });
 
-  if (isInternational) {
-    attachSpotFormEventsInternational(isEdit);
-  } else {
-    attachSpotFormEvents(isEdit);
-  }
+  attachSpotFormEventsInternational(isEdit);
   document.getElementById('f_name').focus();
 }
 
