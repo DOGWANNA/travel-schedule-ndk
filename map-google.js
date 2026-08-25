@@ -101,7 +101,33 @@ class GoogleMapAdapter extends MapAdapter {
     if (mode === 'transit') {
       return this._fetchTransitRoute(from, to);
     }
-    return this._fetchDrivingRoute(from, to, mode);
+    try {
+      return await this._fetchDrivingRoute(from, to, mode);
+    } catch (e) {
+      // Google은 한국 내 도로/도보 경로를 지원하지 않음 → Naver Worker로 폴백
+      if (this._isKoreanCoords(from, to) && typeof ROUTE_WORKER_URL !== 'undefined') {
+        return await this._fetchNaverRoute(from, to);
+      }
+      throw e;
+    }
+  }
+
+  _isKoreanCoords(from, to) {
+    function inKorea(p) { return p.lat >= 33 && p.lat <= 39 && p.lng >= 124 && p.lng <= 132; }
+    return inKorea(from) || inKorea(to);
+  }
+
+  async _fetchNaverRoute(from, to) {
+    const url = ROUTE_WORKER_URL + '/route?slat=' + from.lat + '&slng=' + from.lng +
+      '&dlat=' + to.lat + '&dlng=' + to.lng;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Naver route failed: ' + res.status);
+    const data = await res.json();
+    if (!data.path) throw new Error('No path from Naver');
+    return {
+      path: data.path.map(function(p) { return { lat: p[0], lng: p[1] }; }),
+      durationMs: data.durationMs || 0
+    };
   }
 
   _fetchTransitRoute(from, to) {
