@@ -102,8 +102,26 @@ class GoogleMapAdapter extends MapAdapter {
     return this._fetchDrivingRoute(from, to, mode);
   }
 
-  _fetchTransitRoute() {
-    return Promise.reject(new Error('TRANSIT_UNSUPPORTED'));
+  _fetchTransitRoute(from, to) {
+    return new Promise(function(resolve, reject) {
+      new google.maps.DirectionsService().route({
+        origin: { lat: from.lat, lng: from.lng },
+        destination: { lat: to.lat, lng: to.lng },
+        travelMode: google.maps.TravelMode.TRANSIT,
+        transitOptions: { departureTime: new Date() }
+      }, function(result, status) {
+        if (status !== 'OK') { reject(new Error('Transit: ' + status)); return; }
+        const route = result.routes[0];
+        const path = [];
+        route.legs.forEach(function(leg) {
+          leg.steps.forEach(function(step) {
+            step.path.forEach(function(p) { path.push({ lat: p.lat(), lng: p.lng() }); });
+          });
+        });
+        const durationMs = route.legs.reduce(function(sum, leg) { return sum + leg.duration.value; }, 0) * 1000;
+        resolve({ path, durationMs });
+      });
+    });
   }
 
   _fetchDrivingRoute(from, to, mode) {
