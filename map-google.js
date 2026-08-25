@@ -112,8 +112,8 @@ class GoogleMapAdapter extends MapAdapter {
       const TravelModeEnum = routesLib.TravelMode;
       if (RouteClass) {
         const request = {
-          origin: { location: { latLng: new google.maps.LatLng(from.lat, from.lng) } },
-          destination: { location: { latLng: new google.maps.LatLng(to.lat, to.lng) } },
+          origin: { lat: from.lat, lng: from.lng },
+          destination: { lat: to.lat, lng: to.lng },
           travelMode: TravelModeEnum ? TravelModeEnum.TRANSIT : 'TRANSIT'
         };
         const callFn = typeof RouteClass.computeRoutes === 'function'
