@@ -40,12 +40,11 @@ class GoogleMapAdapter extends MapAdapter {
     if (options && options.icon && options.icon.element) {
       content = options.icon.element;
     } else {
-      const pin = new this._PinElement({
+      content = new this._PinElement({
         background: '#e2703f',
         glyphColor: 'white',
         borderColor: '#c85a2a'
       });
-      content = pin.element;
     }
     const marker = new this._AdvancedMarkerElement({
       position: { lat, lng },
@@ -104,20 +103,19 @@ class GoogleMapAdapter extends MapAdapter {
   }
 
   async _fetchTransitRoute(from, to) {
-    const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    const url = 'https://routes.googleapis.com/directions/v2:computeRoutes?key=' + GOOGLE_MAPS_API_KEY;
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
-        'X-Goog-FieldMask': 'routes.duration,routes.polyline.encodedPolyline'
+        'X-Goog-FieldMask': 'routes.duration,routes.polyline.encodedPolyline,routes.legs.duration,routes.legs.polyline.encodedPolyline,routes.legs.steps.polyline.encodedPolyline'
       },
       body: JSON.stringify({
         origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
         destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
         travelMode: 'TRANSIT',
         computeAlternativeRoutes: false,
-        languageCode: 'ko-KR',
-        transitPreferences: { routingPreference: 'FEWER_TRANSFERS' }
+        languageCode: 'ko-KR'
       })
     });
 
@@ -127,13 +125,34 @@ class GoogleMapAdapter extends MapAdapter {
     }
 
     const data = await res.json();
-    if (!data.routes || !data.routes.length) throw new Error('No transit route: ' + JSON.stringify(data).slice(0, 200));
+    console.log('[transit] raw response:', JSON.stringify(data).slice(0, 500));
+    if (!data.routes || !data.routes.length) throw new Error('No transit route: ' + JSON.stringify(data).slice(0, 300));
 
     const r = data.routes[0];
     const { encoding } = await google.maps.importLibrary('geometry');
-    const path = encoding.decodePath(r.polyline.encodedPolyline)
-      .map(p => ({ lat: p.lat(), lng: p.lng() }));
-    const durationMs = parseInt(r.duration) * 1000;
+
+    let path = [];
+    if (r.polyline && r.polyline.encodedPolyline) {
+      path = encoding.decodePath(r.polyline.encodedPolyline).map(p => ({ lat: p.lat(), lng: p.lng() }));
+    } else if (r.legs && r.legs.length) {
+      r.legs.forEach(function(leg) {
+        if (leg.steps && leg.steps.length) {
+          leg.steps.forEach(function(step) {
+            if (step.polyline && step.polyline.encodedPolyline) {
+              encoding.decodePath(step.polyline.encodedPolyline).forEach(function(p) {
+                path.push({ lat: p.lat(), lng: p.lng() });
+              });
+            }
+          });
+        } else if (leg.polyline && leg.polyline.encodedPolyline) {
+          encoding.decodePath(leg.polyline.encodedPolyline).forEach(function(p) {
+            path.push({ lat: p.lat(), lng: p.lng() });
+          });
+        }
+      });
+    }
+
+    const durationMs = parseInt(r.duration || '0') * 1000;
     return { path, durationMs };
   }
 
