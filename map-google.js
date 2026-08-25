@@ -103,6 +103,7 @@ class GoogleMapAdapter extends MapAdapter {
   }
 
   _fetchTransitRoute(from, to) {
+    const VEHICLE_ICON = { SUBWAY: '🚇', BUS: '🚌', TRAIN: '🚆', RAIL: '🚆', TRAM: '🚊' };
     return new Promise(function(resolve, reject) {
       new google.maps.DirectionsService().route({
         origin: { lat: from.lat, lng: from.lng },
@@ -113,13 +114,27 @@ class GoogleMapAdapter extends MapAdapter {
         if (status !== 'OK') { reject(new Error('Transit: ' + status)); return; }
         const route = result.routes[0];
         const path = [];
+        const transitSteps = [];
         route.legs.forEach(function(leg) {
           leg.steps.forEach(function(step) {
             step.path.forEach(function(p) { path.push({ lat: p.lat(), lng: p.lng() }); });
+            if (step.travel_mode === 'WALKING') {
+              transitSteps.push({ mode: 'WALKING', duration: step.duration.text });
+            } else if (step.travel_mode === 'TRANSIT' && step.transit) {
+              var t = step.transit;
+              transitSteps.push({
+                mode: 'TRANSIT',
+                duration: step.duration.text,
+                lineName: (t.line && (t.line.short_name || t.line.name)) || '',
+                numStops: t.num_stops || 0,
+                vehicleType: (t.line && t.line.vehicle && t.line.vehicle.type) || 'BUS',
+                icon: VEHICLE_ICON[(t.line && t.line.vehicle && t.line.vehicle.type)] || '🚌'
+              });
+            }
           });
         });
         const durationMs = route.legs.reduce(function(sum, leg) { return sum + leg.duration.value; }, 0) * 1000;
-        resolve({ path, durationMs });
+        resolve({ path, durationMs, transitSteps });
       });
     });
   }

@@ -286,6 +286,7 @@ function renderMapPanel() {
     <div class="map-selected-info">
       <div class="route-line">${item.from} <span class="arrow">&#8594;</span> ${item.to}</div>
       <div>${item.transport}${mapDurationText ? ' · <span class="duration-value">' + mapDurationText + '</span>' : ''}</div>
+      <div class="transit-steps"></div>
       ${linkButtonsHtml(item)}
     </div>
   `;
@@ -361,6 +362,16 @@ function setDurationUnsupported() {
   if (mapDurationEl) mapDurationEl.textContent = text;
 }
 
+function renderTransitSteps(steps) {
+  const el = mapSelectedInfoEl.querySelector('.transit-steps');
+  if (!el || !steps || !steps.length) return;
+  const parts = steps.map(function(s) {
+    if (s.mode === 'WALKING') return '🚶 ' + s.duration;
+    return s.icon + ' ' + s.lineName + (s.numStops ? ' ' + s.numStops + '정거장' : '');
+  });
+  el.innerHTML = '<div class="transit-steps-summary">' + parts.join(' → ') + '</div>';
+}
+
 async function showMapPins(item) {
   if (!mapAdapter) return;
 
@@ -402,7 +413,7 @@ async function showMapPins(item) {
   if (shouldFetchRoute) {
     const routeMode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
     try {
-      const { path, durationMs } = await mapAdapter.fetchRoute(
+      const { path, durationMs, transitSteps } = await mapAdapter.fetchRoute(
         { lat: fromLat, lng: fromLng },
         { lat: toLat, lng: toLng },
         routeMode
@@ -411,6 +422,7 @@ async function showMapPins(item) {
       if (mySeq !== mapRequestSeq) { console.log('[route] seq mismatch, skip draw'); return; }
       mapAdapter.drawPolyline(path, { strokeColor: '#e2703f', strokeWeight: 4, strokeStyle: 'solid' });
       if (durationMs) updateDurationDisplay(durationMs);
+      if (transitSteps && transitSteps.length) renderTransitSteps(transitSteps);
       return;
     } catch (e) {
       console.warn('[route] FAILED', routeMode, e.message);
