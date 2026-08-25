@@ -102,58 +102,25 @@ class GoogleMapAdapter extends MapAdapter {
     return this._fetchDrivingRoute(from, to, mode);
   }
 
-  async _fetchTransitRoute(from, to) {
-    const url = 'https://routes.googleapis.com/directions/v2:computeRoutes?key=' + GOOGLE_MAPS_API_KEY;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-FieldMask': 'routes.duration,routes.polyline.encodedPolyline,routes.legs.duration,routes.legs.polyline.encodedPolyline,routes.legs.steps.polyline.encodedPolyline'
-      },
-      body: JSON.stringify({
-        origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
-        destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
-        travelMode: 'TRANSIT',
-        computeAlternativeRoutes: false,
-        languageCode: 'ko-KR'
-      })
-    });
-
-    if (!res.ok) {
-      const errText = (await res.text()).slice(0, 300);
-      throw new Error('Routes API ' + res.status + ': ' + errText);
-    }
-
-    const data = await res.json();
-    console.log('[transit] raw response:', JSON.stringify(data).slice(0, 500));
-    if (!data.routes || !data.routes.length) throw new Error('No transit route: ' + JSON.stringify(data).slice(0, 300));
-
-    const r = data.routes[0];
-    const { encoding } = await google.maps.importLibrary('geometry');
-
-    let path = [];
-    if (r.polyline && r.polyline.encodedPolyline) {
-      path = encoding.decodePath(r.polyline.encodedPolyline).map(p => ({ lat: p.lat(), lng: p.lng() }));
-    } else if (r.legs && r.legs.length) {
-      r.legs.forEach(function(leg) {
-        if (leg.steps && leg.steps.length) {
+  _fetchTransitRoute(from, to) {
+    return new Promise(function(resolve, reject) {
+      new google.maps.DirectionsService().route({
+        origin: { lat: from.lat, lng: from.lng },
+        destination: { lat: to.lat, lng: to.lng },
+        travelMode: google.maps.TravelMode.TRANSIT
+      }, function(result, status) {
+        if (status !== 'OK') { reject(new Error('Transit Directions failed: ' + status)); return; }
+        const route = result.routes[0];
+        const path = [];
+        route.legs.forEach(function(leg) {
           leg.steps.forEach(function(step) {
-            if (step.polyline && step.polyline.encodedPolyline) {
-              encoding.decodePath(step.polyline.encodedPolyline).forEach(function(p) {
-                path.push({ lat: p.lat(), lng: p.lng() });
-              });
-            }
+            step.path.forEach(function(p) { path.push({ lat: p.lat(), lng: p.lng() }); });
           });
-        } else if (leg.polyline && leg.polyline.encodedPolyline) {
-          encoding.decodePath(leg.polyline.encodedPolyline).forEach(function(p) {
-            path.push({ lat: p.lat(), lng: p.lng() });
-          });
-        }
+        });
+        const durationMs = route.legs.reduce(function(sum, leg) { return sum + leg.duration.value; }, 0) * 1000;
+        resolve({ path, durationMs });
       });
-    }
-
-    const durationMs = parseInt(r.duration || '0') * 1000;
-    return { path, durationMs };
+    });
   }
 
   _fetchDrivingRoute(from, to, mode) {
