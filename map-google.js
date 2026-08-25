@@ -106,60 +106,38 @@ class GoogleMapAdapter extends MapAdapter {
     const { encoding } = await google.maps.importLibrary('geometry');
 
     // 1차: google.maps.routes.Route (Google 권장 신규 API)
+    // fields는 두 번째 인자가 아닌 request 객체 내부에 포함
     try {
-      const routesLib = await google.maps.importLibrary('routes');
-      const RouteClass = routesLib.Route;
-      const TravelModeEnum = routesLib.TravelMode;
-      if (RouteClass) {
-        const request = {
-          origin: { lat: from.lat, lng: from.lng },
-          destination: { lat: to.lat, lng: to.lng },
-          travelMode: TravelModeEnum ? TravelModeEnum.TRANSIT : 'TRANSIT'
-        };
-        const fetchFields = [
-          'routes.duration',
-          'routes.polyline.encodedPolyline',
-          'routes.legs.duration',
-          'routes.legs.steps.polyline.encodedPolyline'
-        ];
-        const callFn = typeof RouteClass.computeRoutes === 'function'
-          ? function(req, f) { return RouteClass.computeRoutes(req, f); }
-          : function(req, f) { return new RouteClass().computeRoutes(req, f); };
-        const result = await callFn(request, fetchFields);
-        try {
-          console.log('[routes.Route result type]:', typeof result);
-          if (result && result.routes) {
-            console.log('[routes count]:', result.routes.length);
-            if (result.routes.length > 0) {
-              var r0 = result.routes[0];
-              console.log('[route[0] keys]:', Object.keys(r0).join(', '));
-              console.log('[route[0].duration]:', r0.duration);
-              console.log('[route[0].polyline]:', r0.polyline);
-              console.log('[route[0].legs count]:', r0.legs ? r0.legs.length : 'no legs');
-            }
-          } else {
-            console.log('[routes.Route result raw]:', result);
-          }
-        } catch (_) {}
-        if (result && result.routes && result.routes.length) {
-          const r = result.routes[0];
-          let path = [];
-          if (r.polyline && r.polyline.encodedPolyline) {
-            path = encoding.decodePath(r.polyline.encodedPolyline).map(function(p) { return { lat: p.lat(), lng: p.lng() }; });
-          } else if (r.legs) {
-            r.legs.forEach(function(leg) {
-              (leg.steps || []).forEach(function(step) {
-                if (step.polyline && step.polyline.encodedPolyline) {
-                  encoding.decodePath(step.polyline.encodedPolyline).forEach(function(p) { path.push({ lat: p.lat(), lng: p.lng() }); });
-                }
-              });
-            });
-          }
-          const durationMs = r.duration ? (typeof r.duration === 'string' ? parseInt(r.duration) * 1000 : (r.duration.seconds || 0) * 1000) : 0;
-          if (path.length) return { path, durationMs };
-        }
-        throw new Error('routes.Route: no usable route');
+      const { Route, TravelMode } = await google.maps.importLibrary('routes');
+      const { routes } = await Route.computeRoutes({
+        origin: { lat: from.lat, lng: from.lng },
+        destination: { lat: to.lat, lng: to.lng },
+        travelMode: TravelMode ? TravelMode.TRANSIT : 'TRANSIT',
+        fields: ['path', 'duration', 'legs']
+      });
+      console.log('[routes.Route count]:', routes ? routes.length : 0);
+      if (!routes || !routes.length) throw new Error('no routes');
+      const r = routes[0];
+      console.log('[route keys]:', Object.keys(r).join(', '));
+      console.log('[route.path type]:', r.path ? (Array.isArray(r.path) ? 'array[' + r.path.length + ']' : typeof r.path) : 'none');
+      console.log('[route.duration]:', r.duration);
+      let path = [];
+      if (r.path && Array.isArray(r.path)) {
+        r.path.forEach(function(p) {
+          path.push({ lat: typeof p.lat === 'function' ? p.lat() : p.lat, lng: typeof p.lng === 'function' ? p.lng() : p.lng });
+        });
+      } else if (r.polyline && r.polyline.encodedPolyline) {
+        path = encoding.decodePath(r.polyline.encodedPolyline).map(function(p) { return { lat: p.lat(), lng: p.lng() }; });
       }
+      var durationMs = 0;
+      if (r.duration) {
+        if (typeof r.duration === 'number') durationMs = r.duration * 1000;
+        else if (typeof r.duration === 'string') durationMs = parseInt(r.duration) * 1000;
+        else if (r.duration.seconds) durationMs = r.duration.seconds * 1000;
+        else if (r.duration.value) durationMs = r.duration.value * 1000;
+      }
+      if (!path.length) throw new Error('empty path');
+      return { path, durationMs };
     } catch (e) {
       console.warn('[routes.Route failed]:', e.message);
     }
