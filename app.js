@@ -346,6 +346,21 @@ function updateDurationDisplay(durationMs) {
   if (mapDurationEl) mapDurationEl.textContent = text;
 }
 
+function setDurationUnsupported() {
+  const text = "경로 미지원";
+  if (activeDay && selectedIndex !== null && scheduleData[activeDay]) {
+    scheduleData[activeDay].items[selectedIndex].duration = text;
+  }
+  document.querySelectorAll(".schedule-card.selected .duration-chip").forEach((el) => {
+    el.textContent = "⏱ " + text;
+  });
+  document.querySelectorAll(".schedule-card.selected .duration-value").forEach((el) => {
+    el.textContent = text;
+  });
+  const mapDurationEl = mapSelectedInfoEl.querySelector(".duration-value");
+  if (mapDurationEl) mapDurationEl.textContent = text;
+}
+
 async function showMapPins(item) {
   if (!mapAdapter) return;
 
@@ -397,7 +412,10 @@ async function showMapPins(item) {
       mapAdapter.drawPolyline(path, { strokeColor: '#e2703f', strokeWeight: 4, strokeStyle: 'solid' });
       if (durationMs) updateDurationDisplay(durationMs);
       return;
-    } catch (e) { console.error('[route] FAILED', routeMode, e.message, e); }
+    } catch (e) {
+      console.warn('[route] FAILED', routeMode, e.message);
+      if (routeMode === 'transit') setDurationUnsupported();
+    }
   }
 
   if (mySeq !== mapRequestSeq) return;
