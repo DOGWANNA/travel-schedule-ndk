@@ -32,22 +32,11 @@ function naverRouteUrl(item) {
 }
 
 function linkButtonsHtml(item) {
-  if (currentTripType === 'international') {
-    const origin = item.fromLat ? item.fromLat + ',' + item.fromLng : encodeURIComponent(item.from);
-    const dest = item.toLat ? item.toLat + ',' + item.toLng : encodeURIComponent(item.to);
-    const travelmode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
-    const googleUrl = 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + dest + '&travelmode=' + travelmode;
-    return `<div class="route-actions"><a class="naver-link-btn" href="${googleUrl}" target="_blank" rel="noopener noreferrer">🗺️ Google Maps에서 길찾기</a></div>`;
-  }
-  const hasRealRoute = !!(item.fromMapCoord && item.toMapCoord);
-  const label = hasRealRoute
-    ? "🗺️ 네이버 지도에서 길찾기 열기"
-    : "목적지(" + item.to + ") 위치만 웹에서 검색";
-  return `
-    <div class="route-actions">
-      <a class="naver-link-btn" href="${naverRouteUrl(item)}" target="_blank" rel="noopener noreferrer">${label}</a>
-    </div>
-  `;
+  const origin = item.fromLat ? item.fromLat + ',' + item.fromLng : encodeURIComponent(item.from);
+  const dest = item.toLat ? item.toLat + ',' + item.toLng : encodeURIComponent(item.to);
+  const travelmode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
+  const googleUrl = 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + dest + '&travelmode=' + travelmode;
+  return `<div class="route-actions"><a class="naver-link-btn" href="${googleUrl}" target="_blank" rel="noopener noreferrer">🗺️ Google Maps에서 길찾기</a></div>`;
 }
 
 // ─── 장소 이미지 ──────────────────────────────────────────────────────────────
@@ -135,8 +124,7 @@ function renderScheduleList() {
   items.forEach((item, idx) => {
     const card = document.createElement("div");
     card.className = "schedule-card" + (selectedIndex === idx ? " selected" : "");
-    const isCar = TRANSPORT_SCHEME[item.transport] === "car";
-    const durationText = item.duration || (isCar ? "계산 중..." : null);
+    const durationText = item.duration || "계산 중...";
 
     const storedStepsHtml = (selectedIndex === idx && item.transitSteps) ? transitStepsHtml(item.transitSteps) : '';
     card.innerHTML = `
@@ -193,9 +181,9 @@ function renderScheduleList() {
       const globalIdx = pageStart + localIdx;
       const spotCard = document.createElement("div");
       spotCard.className = "spot-card" + (selectedSpotIndex === globalIdx ? " selected" : "");
-      const spotMapUrl = currentTripType === 'international'
-        ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(spot.name)
-        : (spot.naverUrl || '#');
+      const spotMapUrl = spot.googlePlaceId
+        ? 'https://www.google.com/maps/place/?q=place_id:' + spot.googlePlaceId
+        : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(spot.name) + (spot.lat ? '&center=' + spot.lat + ',' + spot.lng : '');
 
       spotCard.innerHTML = `
         <div class="spot-thumb-wrap">
@@ -209,8 +197,8 @@ function renderScheduleList() {
         <a class="spot-naver-btn" href="${spotMapUrl}" target="_blank" rel="noopener noreferrer">지도 보기</a>
       `;
 
-      if (currentTripType === 'domestic') loadSpotImage(spotCard, spot.naverUrl);
-      else loadSpotImageGoogle(spotCard, spot);
+      if (spot.googlePlaceId) loadSpotImageGoogle(spotCard, spot);
+      else if (spot.naverUrl) loadSpotImage(spotCard, spot.naverUrl);
 
       spotCard.addEventListener("click", () => {
         selectedSpotIndex = (selectedSpotIndex === globalIdx) ? null : globalIdx;
@@ -279,8 +267,7 @@ function renderMapPanel() {
 
   const item = scheduleData[activeDay].items[selectedIndex];
 
-  const isCarItem = TRANSPORT_SCHEME[item.transport] === "car";
-  const mapDurationText = item.duration || (isCarItem ? "계산 중..." : null);
+  const mapDurationText = item.duration || "계산 중...";
 
   mapSelectedInfoEl.innerHTML = `
     <div class="map-selected-info">
@@ -295,25 +282,21 @@ function renderMapPanel() {
 
 // ─── 지도 SDK 로드 ─────────────────────────────────────────────────────────────
 
-function loadMapSDK(tripType) {
+function loadMapSDK() {
   return new Promise((resolve) => {
-    if (tripType === 'international') {
-      window.__googleMapsReady = function() {
-        delete window.__googleMapsReady;
-        resolve(new GoogleMapAdapter());
-      };
-      const script = document.createElement('script');
-      script.src = 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE_MAPS_API_KEY +
-        '&libraries=places&callback=__googleMapsReady&loading=async';
-      script.async = true;
-      document.head.appendChild(script);
-    } else {
-      const script = document.createElement('script');
-      script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=mi7v1rjuhb&submodules=geocoder';
-      script.onload = () => resolve(new NaverMapAdapter());
-      script.onerror = () => resolve(new NaverMapAdapter());
-      document.head.appendChild(script);
+    if (window.google && window.google.maps) {
+      resolve(new GoogleMapAdapter());
+      return;
     }
+    window.__googleMapsReady = function() {
+      delete window.__googleMapsReady;
+      resolve(new GoogleMapAdapter());
+    };
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE_MAPS_API_KEY +
+      '&libraries=places&callback=__googleMapsReady&loading=async';
+    script.async = true;
+    document.head.appendChild(script);
   });
 }
 
@@ -446,10 +429,8 @@ async function showMapPins(item) {
   mapAdapter.addMarker(toLat, toLng, { title: item.to });
   mapAdapter.fitBounds([{ lat: fromLat, lng: fromLng }, { lat: toLat, lng: toLng }]);
 
-  const isCarMode = TRANSPORT_SCHEME[item.transport] === 'car';
-  const shouldFetchRoute = isCarMode || currentTripType === 'international';
-  if (shouldFetchRoute) {
-    const routeMode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
+  const routeMode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
+  {
     try {
       const { path, durationMs, transitSteps, stepPaths } = await mapAdapter.fetchRoute(
         { lat: fromLat, lng: fromLng },
@@ -493,12 +474,10 @@ async function renderSpotOnMap(spot) {
     return;
   }
 
-  const mapUrl = currentTripType === 'international'
-    ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(spot.name)
-    : (spot.naverUrl || '#');
-  const mapLabel = currentTripType === 'international'
-    ? '🗺️ Google Maps에서 보기'
-    : '🗺️ 네이버 지도에서 보기';
+  const mapUrl = spot.googlePlaceId
+    ? 'https://www.google.com/maps/place/?q=place_id:' + spot.googlePlaceId
+    : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(spot.name) + (spot.lat ? '&center=' + spot.lat + ',' + spot.lng : '');
+  const mapLabel = '🗺️ Google Maps에서 보기';
 
   mapSelectedInfoEl.innerHTML = `
     <div class="map-selected-info">
@@ -565,7 +544,7 @@ async function init() {
     document.title = result.title;
   }
 
-  mapAdapter = await loadMapSDK(currentTripType);
+  mapAdapter = await loadMapSDK();
   await mapAdapter.init('naverMap');
 
   renderDayTabs();
