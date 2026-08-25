@@ -432,6 +432,7 @@ async function showMapPins(item) {
   const routeMode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
   {
     try {
+      console.log('[route] REQUEST', routeMode, '| transport:', item.transport, '| from:', fromLat, fromLng, '→ to:', toLat, toLng);
       const { path, durationMs, transitSteps, stepPaths } = await mapAdapter.fetchRoute(
         { lat: fromLat, lng: fromLng },
         { lat: toLat, lng: toLng },
