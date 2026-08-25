@@ -109,10 +109,14 @@ class GoogleMapAdapter extends MapAdapter {
     // fields는 두 번째 인자가 아닌 request 객체 내부에 포함
     try {
       const { Route, TravelMode } = await google.maps.importLibrary('routes');
+      const depTime = new Date();
+      console.log('[transit departureTime]:', depTime.toISOString());
       const { routes } = await Route.computeRoutes({
         origin: { lat: from.lat, lng: from.lng },
         destination: { lat: to.lat, lng: to.lng },
         travelMode: TravelMode ? TravelMode.TRANSIT : 'TRANSIT',
+        departureTime: depTime,
+        transitPreference: 'TRANSIT_PREFERENCE_UNSPECIFIED',
         fields: ['path', 'legs']
       });
       console.log('[routes.Route count]:', routes ? routes.length : 0);
