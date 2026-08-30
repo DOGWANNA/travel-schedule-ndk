@@ -317,6 +317,26 @@
   border: none;
 }
 
+/* 드래그 핸들 */
+.drag-handle {
+  font-size: 18px;
+  color: var(--border);
+  cursor: grab;
+  padding: 0 6px 0 2px;
+  flex-shrink: 0;
+  user-select: none;
+  line-height: 1;
+  transition: color .15s;
+}
+.drag-handle:hover { color: var(--text-sub); }
+.drag-handle:active { cursor: grabbing; }
+.admin-list-item.dragging { opacity: 0.35; }
+.admin-list-item.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(226, 112, 63, 0.25);
+  transform: scale(1.01);
+}
+
 @media (max-width: 720px) {
   .admin-layout { padding: 10px 16px 48px; }
   .breadcrumb { padding: 6px 16px 0; }

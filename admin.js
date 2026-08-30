@@ -309,6 +309,59 @@ function confirmDeleteDay(day) {
   });
 }
 
+// ─── 드래그앤드랍 순서 변경 ───────────────────────────────────────────────────
+
+function makeDraggable(listEl, table, currentItems) {
+  if (!listEl) return;
+  var dragSrc = null;
+
+  listEl.querySelectorAll('.admin-list-item').forEach(function(el) {
+    el.addEventListener('dragstart', function(e) {
+      dragSrc = el;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(function() { el.classList.add('dragging'); }, 0);
+    });
+    el.addEventListener('dragend', function() {
+      el.classList.remove('dragging');
+      listEl.querySelectorAll('.drag-over').forEach(function(i) { i.classList.remove('drag-over'); });
+      dragSrc = null;
+    });
+    el.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      if (!dragSrc || dragSrc === el) return;
+      listEl.querySelectorAll('.drag-over').forEach(function(i) { i.classList.remove('drag-over'); });
+      el.classList.add('drag-over');
+    });
+    el.addEventListener('dragleave', function(e) {
+      if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over');
+    });
+    el.addEventListener('drop', async function(e) {
+      e.preventDefault();
+      el.classList.remove('drag-over');
+      if (!dragSrc || dragSrc === el) return;
+      var allItems = Array.from(listEl.querySelectorAll('.admin-list-item'));
+      var srcIdx = allItems.indexOf(dragSrc);
+      var dstIdx = allItems.indexOf(el);
+      if (srcIdx < dstIdx) listEl.insertBefore(dragSrc, el.nextSibling);
+      else listEl.insertBefore(dragSrc, el);
+      var reordered = Array.from(listEl.querySelectorAll('.admin-list-item'));
+      try {
+        await Promise.all(reordered.map(function(node, i) {
+          var id = node.dataset.id;
+          var found = currentItems.find(function(it) { return it.id === id; });
+          var newNum = i + 1;
+          if (found && found.order_num !== newNum) {
+            found.order_num = newNum;
+            return apiPatch(table, id, { order_num: newNum });
+          }
+        }).filter(Boolean));
+      } catch (err) {
+        console.error('[drag] 순서 저장 실패', err);
+      }
+    });
+  });
+}
+
 // ─── 뷰: 일차 상세 ───────────────────────────────────────────────────────────
 
 async function showDayView(day) {
@@ -330,9 +383,14 @@ async function showDayView(day) {
   if (!items.length) {
     html += '<div class="admin-empty" style="padding:20px 0;">등록된 이동 일정이 없습니다.</div>';
   } else {
-    html += '<div class="admin-list">';
+    html += '<div class="admin-list" id="itemsList">';
     items.forEach(function(item) {
-      html += '<div class="admin-list-item"><div class="item-main"><div class="item-title">' + esc(item.from_name) + ' → ' + esc(item.to_name) + '</div><div class="item-sub">' + (TRANSPORT_ICON[item.transport] || '') + ' ' + esc(item.transport) + (item.duration ? ' · ' + esc(item.duration) : '') + '</div></div><div class="item-actions"><button class="btn-edit" data-action="edit-item" data-id="' + item.id + '">수정</button><button class="btn-delete-sm" data-action="del-item" data-id="' + item.id + '">삭제</button></div></div>';
+      html += '<div class="admin-list-item" draggable="true" data-id="' + item.id + '">' +
+        '<span class="drag-handle" title="드래그로 순서 변경">⠿</span>' +
+        '<div class="item-main"><div class="item-title">' + esc(item.from_name) + ' → ' + esc(item.to_name) + '</div>' +
+        '<div class="item-sub">' + (TRANSPORT_ICON[item.transport] || '') + ' ' + esc(item.transport) + (item.duration ? ' · ' + esc(item.duration) : '') + '</div></div>' +
+        '<div class="item-actions"><button class="btn-edit" data-action="edit-item" data-id="' + item.id + '">수정</button>' +
+        '<button class="btn-delete-sm" data-action="del-item" data-id="' + item.id + '">삭제</button></div></div>';
     });
     html += '</div>';
   }
@@ -342,14 +400,22 @@ async function showDayView(day) {
   if (!spots.length) {
     html += '<div class="admin-empty" style="padding:20px 0;">등록된 장소가 없습니다.</div>';
   } else {
-    html += '<div class="admin-list">';
+    html += '<div class="admin-list" id="spotsList">';
     spots.forEach(function(spot) {
-      html += '<div class="admin-list-item"><div class="item-main"><div class="item-title">' + (SPOT_TYPE_ICON[spot.type] || '📍') + ' ' + esc(spot.name) + '</div><div class="item-sub">' + esc(spot.memo || '') + '</div></div><div class="item-actions"><button class="btn-edit" data-action="edit-spot" data-id="' + spot.id + '">수정</button><button class="btn-delete-sm" data-action="del-spot" data-id="' + spot.id + '">삭제</button></div></div>';
+      html += '<div class="admin-list-item" draggable="true" data-id="' + spot.id + '">' +
+        '<span class="drag-handle" title="드래그로 순서 변경">⠿</span>' +
+        '<div class="item-main"><div class="item-title">' + (SPOT_TYPE_ICON[spot.type] || '📍') + ' ' + esc(spot.name) + '</div>' +
+        '<div class="item-sub">' + esc(spot.memo || '') + '</div></div>' +
+        '<div class="item-actions"><button class="btn-edit" data-action="edit-spot" data-id="' + spot.id + '">수정</button>' +
+        '<button class="btn-delete-sm" data-action="del-spot" data-id="' + spot.id + '">삭제</button></div></div>';
     });
     html += '</div>';
   }
 
   contentEl.innerHTML = html;
+
+  if (items.length > 1) makeDraggable(document.getElementById('itemsList'), 'schedule_items', items);
+  if (spots.length > 1) makeDraggable(document.getElementById('spotsList'), 'spots', spots);
 
   document.getElementById('addItemBtn').addEventListener('click', function() { openItemModal(null, items.length); });
   document.getElementById('addSpotBtn').addEventListener('click', function() { openSpotModal(null, spots.length); });
