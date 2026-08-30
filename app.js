@@ -104,6 +104,7 @@ function renderDayTabs() {
       renderDayTabs();
       renderScheduleList();
       renderMapPanel();
+      prefetchAllDurations(activeDay);
     });
     dayTabsEl.appendChild(tab);
   });
@@ -124,6 +125,7 @@ function renderScheduleList() {
   items.forEach((item, idx) => {
     const card = document.createElement("div");
     card.className = "schedule-card" + (selectedIndex === idx ? " selected" : "");
+    card.dataset.idx = idx;
     const durationText = item.duration || "계산 중...";
 
     const storedStepsHtml = (selectedIndex === idx && item.transitSteps) ? transitStepsHtml(item.transitSteps) : '';
@@ -500,6 +502,59 @@ async function renderSpotOnMap(spot) {
   }
 }
 
+async function prefetchAllDurations(dayKey) {
+  if (!mapAdapter) return;
+  const data = scheduleData[dayKey];
+  if (!data || !data.items.length) return;
+
+  for (let idx = 0; idx < data.items.length; idx++) {
+    if (dayKey !== activeDay) return;
+    const item = data.items[idx];
+    if (item.duration) continue;
+
+    let fromLat = item.fromLat, fromLng = item.fromLng;
+    let toLat = item.toLat, toLng = item.toLng;
+
+    if (!fromLat && item.fromMapCoord) {
+      const c = mapCoordToLatLng(item.fromMapCoord);
+      if (c) { fromLat = c.lat; fromLng = c.lng; }
+    }
+    if (!toLat && item.toMapCoord) {
+      const c = mapCoordToLatLng(item.toMapCoord);
+      if (c) { toLat = c.lat; toLng = c.lng; }
+    }
+    if (!fromLat && item.fromPlaceId) {
+      try { const c = await fetchPlaceCoordById(item.fromPlaceId); if (c) { fromLat = c.lat; fromLng = c.lng; } } catch (_) {}
+    }
+    if (!toLat && item.toPlaceId) {
+      try { const c = await fetchPlaceCoordById(item.toPlaceId); if (c) { toLat = c.lat; toLng = c.lng; } } catch (_) {}
+    }
+    if (!fromLat || !toLat) continue;
+
+    const routeMode = GOOGLE_ROUTE_MODE[item.transport] || 'driving';
+    let text;
+    try {
+      const result = await mapAdapter.fetchRoute(
+        { lat: fromLat, lng: fromLng },
+        { lat: toLat, lng: toLng },
+        routeMode
+      );
+      if (dayKey !== activeDay) return;
+      text = result.durationMs > 0 ? formatDuration(result.durationMs) + ' (실시간)' : '경로 미지원';
+    } catch (_) {
+      if (dayKey !== activeDay) return;
+      text = '경로 미지원';
+    }
+
+    data.items[idx].duration = text;
+    const card = scheduleListEl.querySelector(`.schedule-card[data-idx="${idx}"]`);
+    if (card) {
+      const chip = card.querySelector('.duration-chip');
+      if (chip) chip.textContent = '⏱ ' + text;
+    }
+  }
+}
+
 // ─── 이용 안내 팝업 ────────────────────────────────────────────────────────────
 
 const noteInfoBtn = document.getElementById("noteInfoBtn");
@@ -551,6 +606,7 @@ async function init() {
   renderDayTabs();
   renderScheduleList();
   renderMapPanel();
+  prefetchAllDurations(activeDay);
 }
 
 init();
