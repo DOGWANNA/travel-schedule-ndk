@@ -447,7 +447,7 @@ async function showMapPins(item) {
       } else {
         mapAdapter.drawPolyline(path, { strokeColor: '#e2703f', strokeWeight: 4, strokeStyle: 'solid' });
       }
-      if (durationMs) updateDurationDisplay(durationMs);
+      if (durationMs > 0) updateDurationDisplay(durationMs);
       if (transitSteps && transitSteps.length) {
         if (activeDay && selectedIndex !== null && scheduleData[activeDay]) {
           scheduleData[activeDay].items[selectedIndex].transitSteps = transitSteps;
@@ -457,7 +457,7 @@ async function showMapPins(item) {
       return;
     } catch (e) {
       console.warn('[route] FAILED', routeMode, e.message);
-      if (routeMode === 'transit') setDurationUnsupported();
+      setDurationUnsupported();
     }
   }
 
