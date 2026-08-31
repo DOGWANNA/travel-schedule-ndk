@@ -219,6 +219,13 @@
 }
 
 /* 자동 추출된 필드 (disabled) */
+.form-field input[type="radio"],
+.form-field input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  border: none;
+  background: none;
+}
 .form-field input:disabled {
   background: var(--accent-soft);
   color: var(--text-sub);
