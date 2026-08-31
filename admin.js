@@ -226,7 +226,7 @@ function openTripModal(trip) {
     '<div class="form-field"><label>여행 제목</label><input type="text" id="f_title" value="' + esc(trip ? trip.title : '') + '" placeholder="예: 여수 여행"></div>' +
     '<div class="form-field"><label>여행 타입</label>' +
     '<div style="display:flex;gap:16px;margin-top:4px;">' +
-    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="f_trip_type" value="domestic"' + (isDomestic ? ' checked' : '') + '> 🇰🇷 국내</label>' +
+    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="f_trip_type" value="domestic"' + (isDomestic ? ' checked' : '') + '> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20" width="22" height="15" style="vertical-align:middle;border-radius:2px;border:1px solid #e0e0e0"><rect width="30" height="20" fill="white"/><path d="M10,10 A5,5,0,0,0,20,10 A2.5,2.5,0,0,0,15,10 A2.5,2.5,0,0,1,10,10Z" fill="#CD2E3A"/><path d="M10,10 A2.5,2.5,0,0,0,15,10 A2.5,2.5,0,0,1,20,10 A5,5,0,0,1,10,10Z" fill="#003478"/></svg> 국내</label>' +
     '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="f_trip_type" value="international"' + (!isDomestic ? ' checked' : '') + '> 🌍 해외</label>' +
     '</div></div>' +
     '<div class="form-field"><label>시작일</label><input type="date" id="f_start_date" value="' + esc(trip ? (trip.start_date || '') : '') + '"></div>' +
